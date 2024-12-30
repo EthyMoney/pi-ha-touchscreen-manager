@@ -1,0 +1,15 @@
+{
+  "apps": [
+    {
+      "name": "raspberry-pi-control",
+      "script": "/home/logan/pi-ha-touchscreen-manager/main.js",
+      "watch": true,
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "env_production": {
+        "NODE_ENV": "production"
+      }
+    }
+  ]
+}
