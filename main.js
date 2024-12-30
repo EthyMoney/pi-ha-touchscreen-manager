@@ -6,6 +6,7 @@ const port = 3000;
 app.use(express.static('public'));
 
 app.get('/shutdown', (req, res) => {
+  console.log('Request received to power off system');
   exec('sudo shutdown now', (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`);
@@ -16,6 +17,7 @@ app.get('/shutdown', (req, res) => {
 });
 
 app.get('/reboot', (req, res) => {
+  console.log('Request received to reboot system');
   exec('sudo reboot', (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`);
@@ -26,6 +28,7 @@ app.get('/reboot', (req, res) => {
 });
 
 app.get('/update', (req, res) => {
+  console.log('Request received to do system update');
   exec('sudo apt-get update && sudo apt-get upgrade -y', (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`);
@@ -36,6 +39,7 @@ app.get('/update', (req, res) => {
 });
 
 app.get('/restart-lightdm', (req, res) => {
+  console.log('Request received to restart lightdm');
   exec('sudo systemctl restart lightdm', (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`);
