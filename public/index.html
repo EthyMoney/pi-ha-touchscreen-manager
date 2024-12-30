@@ -102,7 +102,7 @@
   <h1>Raspberry Pi Control</h1>
   <button class="shutdown" onclick="confirmShutdown()">Shut Down</button>
   <button class="reboot" onclick="sendCommand('/reboot')">Reboot</button>
-  <button class="update" onclick="sendCommand('/update')">Update</button>
+  <button class="update" onclick="startUpdate()">Update</button>
   <button class="restart-lightdm" onclick="sendCommand('/restart-lightdm')">Restart LightDM</button>
 
   <script>
@@ -117,6 +117,30 @@
       if (confirm('Are you sure you want to shut down the Raspberry Pi?')) {
         sendCommand('/shutdown');
       }
+    }
+
+    function startUpdate() {
+      alert('Update started, this could be a bit.. You will be notified when it is finished.');
+      fetch('/update')
+        .then(response => response.text())
+        .then(data => {
+          console.log(data);
+          checkUpdateStatus();
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function checkUpdateStatus() {
+      fetch('/update-status')
+        .then(response => response.text())
+        .then(status => {
+          if (status === 'Update finished') {
+            alert('Update finished! You might want to do a reboot soon.');
+          } else {
+            setTimeout(checkUpdateStatus, 5000); // Check again in 5 seconds
+          }
+        })
+        .catch(error => console.error('Error:', error));
     }
   </script>
 </body>

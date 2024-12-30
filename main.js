@@ -2,6 +2,7 @@ const express = require('express');
 const { exec } = require('child_process');
 const app = express();
 const port = 3000;
+let updateInProgress = false;
 
 app.use(express.static('public'));
 
@@ -29,12 +30,18 @@ app.get('/reboot', (req, res) => {
 
 app.get('/update', (req, res) => {
   console.log('Request received to do system update');
+  if (updateInProgress) {
+    return res.status(400).send('Update already in progress');
+  }
+  updateInProgress = true;
+  res.send('Update started');
   exec('sudo apt-get update && sudo apt-get upgrade -y', (error, stdout, stderr) => {
+    updateInProgress = false;
     if (error) {
       console.error(`exec error: ${error}`);
-      return res.status(500).send('Error updating');
+      return;
     }
-    res.send('Updating');
+    console.log('Update finished');
   });
 });
 
