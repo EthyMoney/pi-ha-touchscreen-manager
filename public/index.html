@@ -69,6 +69,15 @@
       background-color: #f57c00;
     }
 
+    .home-assistant {
+      background-color: #4caf50;
+      color: #ffffff;
+    }
+
+    .home-assistant:hover {
+      background-color: #388e3c;
+    }
+
     .background {
       position: absolute;
       top: 0;
@@ -104,6 +113,7 @@
   <button class="reboot" onclick="sendCommand('/reboot')">Reboot</button>
   <button class="update" onclick="startUpdate()">Update</button>
   <button class="restart-lightdm" onclick="sendCommand('/restart-lightdm')">Restart LightDM</button>
+  <button class="home-assistant" onclick="goBack()">Back to Home Assistant</button>
 
   <script>
     function sendCommand(endpoint) {
@@ -141,6 +151,10 @@
           }
         })
         .catch(error => console.error('Error:', error));
+    }
+
+    function goBack() {
+      window.history.back();
     }
   </script>
 </body>
