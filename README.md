@@ -44,18 +44,20 @@ This is meant to be run on the Raspberry Pi itself. You can clone the repository
 
 5. Configure PM2 to start the app on boot and always keep it running in the background:
 
+   First, edit the `process.json` file to replace the "script" value to your your path to the app.
+
    ```sh
    sudo pm2 start process.json
    sudo pm2 save
    sudo pm2 startup
    ```
 
-6. Reboot the Raspberry Pi to ensure the app starts on boot:
+7. Reboot the Raspberry Pi to ensure the app starts on boot:
 
    ```sh
     sudo reboot
     ```
 
-7. Navigate to the app's URL on the Raspberry Pi's touchscreen. The default URL is `http://localhost:3000`. Make a button on your Home Assistant dashboard that navigates to this URL to easily access the app. Note, this is ONLY accessible on the Raspberry Pi itself, not from other devices on the network, it's locally hosted and only meant to be accessed on the Raspberry Pi.
+8. Navigate to the app's URL on the Raspberry Pi's touchscreen. The default URL is `http://localhost:3000`. Make a button on your Home Assistant dashboard that navigates to this URL to easily access the app. Note, this is ONLY accessible on the Raspberry Pi itself, not from other devices on the network, it's locally hosted and only meant to be accessed on the Raspberry Pi.
 
-8. Done! Now you have an easy device management app for your dedicated Home Assistant touchscreen Pi!
+9. Done! Now you have an easy device management app for your dedicated Home Assistant touchscreen Pi!
