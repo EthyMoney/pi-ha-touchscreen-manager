@@ -20,17 +20,22 @@
     }
 
     h1 {
-      margin-bottom: 20px;
+      margin-bottom: 30px;
+      font-size: 2.5rem;
     }
 
     button {
-      padding: 10px 20px;
-      margin: 10px;
+      padding: 30px 50px;
+      margin: 15px;
       cursor: pointer;
-      border-radius: 5px;
+      border-radius: 15px;
       border: none;
       transition: background-color 0.3s, color 0.3s;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+      font-size: 1.5rem;
+      font-weight: bold;
+      min-width: 280px;
+      min-height: 80px;
     }
 
     .shutdown {
@@ -85,37 +90,495 @@
       width: 100%;
       height: 100%;
       z-index: -1;
-      background: linear-gradient(45deg, #ff6b6b, #f06595, #cc5de8, #845ef7, #5c7cfa, #339af0, #22b8cf, #20c997, #51cf66, #94d82d, #fcc419, #ff922b);
-      background-size: 300% 300%;
-      animation: gradient 15s ease infinite;
+      background: linear-gradient(135deg, #1e1e2e 0%, #121212 100%);
+      overflow: hidden;
     }
 
-    @keyframes gradient {
-      0% {
-        background-position: 0% 50%;
-      }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(60px);
+      opacity: 0.6;
+      animation: float 20s infinite ease-in-out;
+    }
 
+    .orb:nth-child(1) {
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, #ff6b9d 0%, transparent 70%);
+      top: 10%;
+      left: 10%;
+      animation-duration: 25s;
+      animation-delay: 0s;
+    }
+
+    .orb:nth-child(2) {
+      width: 250px;
+      height: 250px;
+      background: radial-gradient(circle, #4ecdc4 0%, transparent 70%);
+      top: 60%;
+      left: 70%;
+      animation-duration: 20s;
+      animation-delay: -5s;
+    }
+
+    .orb:nth-child(3) {
+      width: 350px;
+      height: 350px;
+      background: radial-gradient(circle, #c44569 0%, transparent 70%);
+      top: 40%;
+      left: 40%;
+      animation-duration: 30s;
+      animation-delay: -10s;
+    }
+
+    .orb:nth-child(4) {
+      width: 280px;
+      height: 280px;
+      background: radial-gradient(circle, #f38181 0%, transparent 70%);
+      top: 70%;
+      left: 20%;
+      animation-duration: 22s;
+      animation-delay: -15s;
+    }
+
+    .orb:nth-child(5) {
+      width: 320px;
+      height: 320px;
+      background: radial-gradient(circle, #aa96da 0%, transparent 70%);
+      top: 20%;
+      left: 80%;
+      animation-duration: 28s;
+      animation-delay: -8s;
+    }
+
+    .orb:nth-child(6) {
+      width: 270px;
+      height: 270px;
+      background: radial-gradient(circle, #fcbad3 0%, transparent 70%);
+      top: 80%;
+      left: 60%;
+      animation-duration: 24s;
+      animation-delay: -12s;
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translate(0, 0) scale(1);
+      }
+      25% {
+        transform: translate(30px, -40px) scale(1.1);
+      }
       50% {
-        background-position: 100% 50%;
+        transform: translate(-20px, 30px) scale(0.9);
       }
+      75% {
+        transform: translate(40px, 20px) scale(1.05);
+      }
+    }
 
-      100% {
-        background-position: 0% 50%;
-      }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+    }
+
+    .modal-content {
+      background-color: #1e1e1e;
+      margin: 5% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #2196f3;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      color: #2196f3;
+    }
+
+    .close {
+      color: #aaa;
+      font-size: 36px;
+      font-weight: bold;
+      cursor: pointer;
+      padding: 10px;
+      min-width: 50px;
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .close:hover,
+    .close:focus {
+      color: #fff;
+    }
+
+    .output-container {
+      flex: 1;
+      overflow-y: auto;
+      background-color: #0d0d0d;
+      padding: 15px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      margin-bottom: 15px;
+    }
+
+    .status-bar {
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .status-running {
+      background-color: #1976d2;
+    }
+
+    .status-success {
+      background-color: #388e3c;
+    }
+
+    .status-error {
+      background-color: #d32f2f;
+    }
+
+    .info-button {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      min-width: 50px;
+      min-height: 50px;
+      padding: 0;
+      margin: 0;
+      border-radius: 50%;
+      background-color: rgba(33, 150, 243, 0.8);
+      color: white;
+      border: none;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      transition: background-color 0.3s, transform 0.2s;
+      z-index: 100;
+    }
+
+    .info-button:hover {
+      background-color: rgba(25, 118, 210, 1);
+      transform: scale(1.1);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+
+    .stats-label {
+      font-weight: bold;
+      color: #2196f3;
+      text-align: right;
+    }
+
+    .stats-value {
+      color: #ffffff;
+      word-break: break-all;
+    }
+
+    .refresh-button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #2196f3;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .refresh-button:hover {
+      background-color: #1976d2;
+    }
+
+    .brightness-control {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background-color: rgba(30, 30, 30, 0.9);
+      padding: 15px 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 100;
+    }
+
+    .brightness-control label {
+      color: #2196f3;
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 5px;
+    }
+
+    .brightness-slider {
+      width: 100%;
+      height: 40px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: linear-gradient(to right, #222, #2196f3);
+      outline: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .brightness-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 30px;
+      height: 40px;
+      background: #2196f3;
+      cursor: pointer;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .brightness-slider::-moz-range-thumb {
+      width: 30px;
+      height: 40px;
+      background: #2196f3;
+      cursor: pointer;
+      border-radius: 8px;
+      border: none;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .brightness-value {
+      color: #ffffff;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .brightness-settings-btn {
+      background-color: rgba(33, 150, 243, 0.8);
+      color: white;
+      border: none;
+      padding: 1px 4px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 5px;
+      line-height: 1;
+    }
+
+    .brightness-settings-btn:hover {
+      background-color: rgba(25, 118, 210, 1);
+    }
+
+    .schedule-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 15px 0;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .schedule-item {
+      background-color: #2a2a2a;
+      padding: 12px;
+      border-radius: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .schedule-item input[type="time"] {
+      background-color: #1e1e1e;
+      color: white;
+      border: 1px solid #2196f3;
+      padding: 12px;
+      border-radius: 5px;
+      min-width: 120px;
+      font-size: 16px;
+    }
+
+    .schedule-item input[type="number"] {
+      background-color: #1e1e1e;
+      color: white;
+      border: 1px solid #2196f3;
+      padding: 12px;
+      border-radius: 5px;
+      width: 80px;
+      font-size: 16px;
+    }
+
+    .schedule-item label {
+      color: #2196f3;
+      font-size: 16px;
+      margin: 0;
+      font-weight: bold;
+    }
+
+    .schedule-controls {
+      display: flex;
+      gap: 10px;
+    }
+
+    .add-schedule-btn, .save-schedule-btn {
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .add-schedule-btn:hover, .save-schedule-btn:hover {
+      background-color: #388e3c;
+    }
+
+    .delete-schedule-btn {
+      background-color: #ff4c4c;
+      color: white;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .delete-schedule-btn:hover {
+      background-color: #ff1a1a;
+    }
+
+    .schedule-field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .system-clock {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: rgba(30, 30, 30, 0.9);
+      padding: 15px 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      z-index: 100;
+      font-size: 24px;
+      font-weight: bold;
+      color: #2196f3;
+      font-family: 'Courier New', monospace;
     }
   </style>
 </head>
 
 <body>
-  <div class="background"></div>
+  <div class="background">
+    <div class="orb"></div>
+    <div class="orb"></div>
+    <div class="orb"></div>
+    <div class="orb"></div>
+    <div class="orb"></div>
+    <div class="orb"></div>
+  </div>
   <h1>Raspberry Pi Control</h1>
   <button class="shutdown" onclick="confirmShutdown()">Shut Down</button>
-  <button class="reboot" onclick="sendCommand('/reboot')">Reboot</button>
+  <button class="reboot" onclick="confirmReboot()">Reboot</button>
   <button class="update" onclick="startUpdate()">Update</button>
   <button class="restart-lightdm" onclick="sendCommand('/restart-lightdm')">Restart LightDM</button>
   <button class="home-assistant" onclick="goBack()">Back to Home Assistant</button>
 
+  <button class="info-button" onclick="showSystemStats()" title="System Stats">ℹ️</button>
+
+  <div class="brightness-control">
+    <label for="brightnessSlider">Display Brightness</label>
+    <input type="range" id="brightnessSlider" class="brightness-slider" min="0" max="31" value="15" oninput="updateBrightnessDisplay(this.value)" onchange="setBrightness(this.value)">
+    <div class="brightness-value" id="brightnessValue">50%</div>
+    <button class="brightness-settings-btn" onclick="showBrightnessSchedule()">⚙️ Schedule</button>
+  </div>
+
+  <div class="system-clock" id="systemClock">00:00:00</div>
+
+  <div id="updateModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>System Update</h2>
+        <span class="close" onclick="closeUpdateModal()">&times;</span>
+      </div>
+      <div class="output-container" id="updateOutput"></div>
+      <div id="statusBar" class="status-bar status-running">Update in progress...</div>
+    </div>
+  </div>
+
+  <div id="statsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>System Statistics</h2>
+        <span class="close" onclick="closeStatsModal()">&times;</span>
+      </div>
+      <div id="statsContent" class="stats-grid">
+        <span class="stats-label">Loading...</span>
+        <span class="stats-value"></span>
+      </div>
+      <button class="refresh-button" onclick="loadSystemStats()">Refresh</button>
+    </div>
+  </div>
+
+  <div id="scheduleModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Brightness Schedule</h2>
+        <span class="close" onclick="closeScheduleModal()">&times;</span>
+      </div>
+      <div id="scheduleList" class="schedule-list"></div>
+      <div class="schedule-controls">
+        <button class="add-schedule-btn" onclick="addScheduleItem()">+ Add Schedule</button>
+        <button class="save-schedule-btn" onclick="saveSchedule()">Save</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    let eventSource = null;
+
     function sendCommand(endpoint) {
       fetch(endpoint)
         .then(response => response.text())
@@ -129,32 +592,322 @@
       }
     }
 
+    function confirmReboot() {
+      if (confirm('Are you sure you want to reboot the Raspberry Pi?')) {
+        sendCommand('/reboot');
+      }
+    }
+
     function startUpdate() {
-      alert('Update started, this could be a bit.. You will be notified when it is finished.');
+      // Show modal
+      document.getElementById('updateModal').style.display = 'block';
+      document.getElementById('updateOutput').textContent = '';
+      document.getElementById('statusBar').className = 'status-bar status-running';
+      document.getElementById('statusBar').textContent = 'Update in progress...';
+
+      // Start the update
       fetch('/update')
         .then(response => response.text())
         .then(data => {
           console.log(data);
-          checkUpdateStatus();
+          // Connect to SSE for live updates
+          connectToUpdateStream();
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+          console.error('Error:', error);
+          document.getElementById('statusBar').className = 'status-bar status-error';
+          document.getElementById('statusBar').textContent = 'Error starting update';
+        });
     }
 
-    function checkUpdateStatus() {
-      fetch('/update-status')
-        .then(response => response.text())
-        .then(status => {
-          if (status === 'Update finished') {
-            alert('Update finished! You might want to do a reboot soon.');
+    function connectToUpdateStream() {
+      if (eventSource) {
+        eventSource.close();
+      }
+
+      eventSource = new EventSource('/update-status');
+      const outputDiv = document.getElementById('updateOutput');
+      const statusBar = document.getElementById('statusBar');
+
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        outputDiv.textContent += data.message;
+        outputDiv.scrollTop = outputDiv.scrollHeight;
+
+        if (data.done) {
+          eventSource.close();
+          if (data.success) {
+            statusBar.className = 'status-bar status-success';
+            statusBar.textContent = 'Update completed successfully! You might want to reboot soon.';
           } else {
-            setTimeout(checkUpdateStatus, 5000); // Check again in 5 seconds
+            statusBar.className = 'status-bar status-error';
+            statusBar.textContent = 'Update failed. Check the output above for details.';
           }
-        })
-        .catch(error => console.error('Error:', error));
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('EventSource error:', error);
+        eventSource.close();
+        statusBar.className = 'status-bar status-error';
+        statusBar.textContent = 'Connection error. Update may still be running.';
+      };
+    }
+
+    function closeUpdateModal() {
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+      document.getElementById('updateModal').style.display = 'none';
     }
 
     function goBack() {
       window.location.href = 'http://192.168.1.216:8123';
+    }
+
+    function updateBrightnessDisplay(value) {
+      const percentage = Math.round((value / 31) * 100);
+      document.getElementById('brightnessValue').textContent = percentage + '%';
+    }
+
+    function setBrightness(value) {
+      fetch(`/brightness/${value}`, { method: 'POST' })
+        .then(response => response.text())
+        .then(data => {
+          console.log(data);
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Failed to set brightness');
+        });
+    }
+
+    function loadCurrentBrightness() {
+      fetch('/brightness')
+        .then(response => response.json())
+        .then(data => {
+          const slider = document.getElementById('brightnessSlider');
+          slider.value = data.brightness;
+          updateBrightnessDisplay(data.brightness);
+        })
+        .catch(error => {
+          console.error('Error loading brightness:', error);
+        });
+    }
+
+    // Load current brightness on page load
+    window.addEventListener('DOMContentLoaded', loadCurrentBrightness);
+
+    function updateSystemClock() {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('systemClock').textContent = `${hours}:${minutes}:${seconds}`;
+    }
+
+    // Update clock immediately and then every second
+    updateSystemClock();
+    setInterval(updateSystemClock, 1000);
+
+    function showSystemStats() {
+      document.getElementById('statsModal').style.display = 'block';
+      loadSystemStats();
+    }
+
+    function closeStatsModal() {
+      document.getElementById('statsModal').style.display = 'none';
+    }
+
+    function loadSystemStats() {
+      const statsContent = document.getElementById('statsContent');
+      statsContent.innerHTML = '<span class="stats-label">Loading...</span><span class="stats-value"></span>';
+
+      fetch('/system-stats')
+        .then(response => response.json())
+        .then(stats => {
+          let html = '';
+          
+          html += '<span class="stats-label">Hardware:</span>';
+          html += `<span class="stats-value">${stats.hardwareModel}</span>`;
+          
+          html += '<span class="stats-label">Uptime:</span>';
+          html += `<span class="stats-value">${stats.uptime}</span>`;
+          
+          html += '<span class="stats-label">Load Average:</span>';
+          html += `<span class="stats-value">${stats.loadAverage}</span>`;
+          
+          html += '<span class="stats-label">OS Version:</span>';
+          html += `<span class="stats-value">${stats.osVersion}</span>`;
+          
+          html += '<span class="stats-label">IP Address:</span>';
+          html += `<span class="stats-value">${stats.ipAddress}</span>`;
+          
+          html += '<span class="stats-label">WiFi Signal:</span>';
+          html += `<span class="stats-value">${stats.wifiSignal}${stats.wifiSignal !== 'N/A' ? ' dBm' : ''}</span>`;
+          
+          html += '<span class="stats-label">Temperature:</span>';
+          html += `<span class="stats-value">${stats.temperature}</span>`;
+          
+          html += '<span class="stats-label">Disk Space:</span>';
+          html += `<span class="stats-value">${stats.diskSpace}</span>`;
+          
+          html += '<span class="stats-label">Memory:</span>';
+          html += `<span class="stats-value">${stats.memory}</span>`;
+          
+          if (stats.vnstatToday !== 'N/A') {
+            html += '<span class="stats-label">Network (Today):</span>';
+            html += `<span class="stats-value">${stats.vnstatToday}</span>`;
+          }
+          
+          if (stats.vnstatWeek !== 'N/A') {
+            html += '<span class="stats-label">Network (Week):</span>';
+            html += `<span class="stats-value">${stats.vnstatWeek}</span>`;
+          }
+          
+          if (stats.vnstatMonth !== 'N/A') {
+            html += '<span class="stats-label">Network (Month):</span>';
+            html += `<span class="stats-value">${stats.vnstatMonth}</span>`;
+          }
+          
+          statsContent.innerHTML = html;
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          statsContent.innerHTML = '<span class="stats-label">Error:</span><span class="stats-value">Failed to load stats</span>';
+        });
+    }
+
+    function showBrightnessSchedule() {
+      document.getElementById('scheduleModal').style.display = 'block';
+      loadBrightnessSchedule();
+    }
+
+    function closeScheduleModal() {
+      document.getElementById('scheduleModal').style.display = 'none';
+    }
+
+    function loadBrightnessSchedule() {
+      fetch('/brightness-schedule')
+        .then(response => response.json())
+        .then(data => {
+          renderScheduleList(data.schedules);
+        })
+        .catch(error => {
+          console.error('Error loading schedule:', error);
+        });
+    }
+
+    function renderScheduleList(schedules) {
+      const scheduleList = document.getElementById('scheduleList');
+      
+      if (schedules.length === 0) {
+        scheduleList.innerHTML = '<div style="color: #aaa; text-align: center; padding: 20px;">No schedules configured</div>';
+        return;
+      }
+
+      scheduleList.innerHTML = schedules.map((schedule, index) => `
+        <div class="schedule-item" data-index="${index}">
+          <div class="schedule-field-group">
+            <label>Time</label>
+            <input type="time" value="${schedule.hour.padStart(2, '0')}:${schedule.minute.padStart(2, '0')}" onchange="updateScheduleTime(${index}, this.value)">
+          </div>
+          <div class="schedule-field-group">
+            <label>Brightness</label>
+            <input type="number" min="0" max="31" value="${schedule.brightness}" onchange="updateScheduleBrightness(${index}, this.value)">
+          </div>
+          <button class="delete-schedule-btn" onclick="deleteScheduleItem(${index})">Delete</button>
+        </div>
+      `).join('');
+    }
+
+    let currentSchedules = [];
+
+    function updateScheduleTime(index, timeValue) {
+      const [hour, minute] = timeValue.split(':');
+      if (!currentSchedules[index]) currentSchedules[index] = {};
+      currentSchedules[index].hour = hour;
+      currentSchedules[index].minute = minute;
+    }
+
+    function updateScheduleBrightness(index, brightness) {
+      if (!currentSchedules[index]) currentSchedules[index] = {};
+      currentSchedules[index].brightness = brightness;
+    }
+
+    function deleteScheduleItem(index) {
+      currentSchedules.splice(index, 1);
+      renderScheduleList(currentSchedules);
+    }
+
+    function addScheduleItem() {
+      const newSchedule = {
+        hour: '12',
+        minute: '00',
+        brightness: '15'
+      };
+      currentSchedules.push(newSchedule);
+      renderScheduleList(currentSchedules);
+    }
+
+    function saveSchedule() {
+      // Build schedule array from current form values
+      const scheduleItems = document.querySelectorAll('.schedule-item');
+      const schedules = Array.from(scheduleItems).map(item => {
+        const timeInput = item.querySelector('input[type="time"]');
+        const brightnessInput = item.querySelector('input[type="number"]');
+        const [hour, minute] = timeInput.value.split(':');
+        return {
+          hour: hour,
+          minute: minute,
+          brightness: brightnessInput.value
+        };
+      });
+
+      fetch('/brightness-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schedules })
+      })
+        .then(response => response.text())
+        .then(data => {
+          alert('Schedule saved successfully!');
+          currentSchedules = schedules;
+        })
+        .catch(error => {
+          console.error('Error saving schedule:', error);
+          alert('Failed to save schedule');
+        });
+    }
+
+    // Load schedule data when opening modal
+    function loadBrightnessSchedule() {
+      fetch('/brightness-schedule')
+        .then(response => response.json())
+        .then(data => {
+          currentSchedules = data.schedules;
+          renderScheduleList(currentSchedules);
+        })
+        .catch(error => {
+          console.error('Error loading schedule:', error);
+        });
+    }
+
+    // Close modal when clicking outside of it
+    window.onclick = function(event) {
+      const updateModal = document.getElementById('updateModal');
+      const statsModal = document.getElementById('statsModal');
+      const scheduleModal = document.getElementById('scheduleModal');
+      if (event.target === updateModal) {
+        closeUpdateModal();
+      }
+      if (event.target === statsModal) {
+        closeStatsModal();
+      }
+      if (event.target === scheduleModal) {
+        closeScheduleModal();
+      }
     }
   </script>
 </body>
