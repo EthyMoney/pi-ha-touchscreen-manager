@@ -163,15 +163,20 @@
     }
 
     @keyframes float {
-      0%, 100% {
+
+      0%,
+      100% {
         transform: translate(0, 0) scale(1);
       }
+
       25% {
         transform: translate(30px, -40px) scale(1.1);
       }
+
       50% {
         transform: translate(-20px, 30px) scale(0.9);
       }
+
       75% {
         transform: translate(40px, 20px) scale(1.05);
       }
@@ -457,7 +462,8 @@
       gap: 10px;
     }
 
-    .add-schedule-btn, .save-schedule-btn {
+    .add-schedule-btn,
+    .save-schedule-btn {
       background-color: #4caf50;
       color: white;
       border: none;
@@ -468,7 +474,8 @@
       font-weight: bold;
     }
 
-    .add-schedule-btn:hover, .save-schedule-btn:hover {
+    .add-schedule-btn:hover,
+    .save-schedule-btn:hover {
       background-color: #388e3c;
     }
 
@@ -530,7 +537,8 @@
 
   <div class="brightness-control">
     <label for="brightnessSlider">Display Brightness</label>
-    <input type="range" id="brightnessSlider" class="brightness-slider" min="0" max="31" value="15" oninput="updateBrightnessDisplay(this.value)" onchange="setBrightness(this.value)">
+    <input type="range" id="brightnessSlider" class="brightness-slider" min="0" max="31" value="15"
+      oninput="updateBrightnessDisplay(this.value)" onchange="setBrightness(this.value)">
     <div class="brightness-value" id="brightnessValue">50%</div>
     <button class="brightness-settings-btn" onclick="showBrightnessSchedule()">⚙️ Schedule</button>
   </div>
@@ -629,10 +637,35 @@
       const outputDiv = document.getElementById('updateOutput');
       const statusBar = document.getElementById('statusBar');
 
+      // Terminal-style buffer: track committed lines and current in-progress line
+      // so that '\r' (carriage return) overwrites the current line, like a real terminal.
+      let committed = '';
+      let currentLine = '';
+      const renderOutput = () => {
+        outputDiv.textContent = committed + currentLine;
+        outputDiv.scrollTop = outputDiv.scrollHeight;
+      };
+      const appendChunk = (chunk) => {
+        // Normalize CRLF so we don't double-handle.
+        const text = chunk.replace(/\r\n/g, '\n');
+        for (let i = 0; i < text.length; i++) {
+          const ch = text[i];
+          if (ch === '\n') {
+            committed += currentLine + '\n';
+            currentLine = '';
+          } else if (ch === '\r') {
+            // Reset the current line so the next chars overwrite it.
+            currentLine = '';
+          } else {
+            currentLine += ch;
+          }
+        }
+      };
+
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        outputDiv.textContent += data.message;
-        outputDiv.scrollTop = outputDiv.scrollHeight;
+        appendChunk(data.message);
+        renderOutput();
 
         if (data.done) {
           eventSource.close();
@@ -728,49 +761,49 @@
         .then(response => response.json())
         .then(stats => {
           let html = '';
-          
+
           html += '<span class="stats-label">Hardware:</span>';
           html += `<span class="stats-value">${stats.hardwareModel}</span>`;
-          
+
           html += '<span class="stats-label">Uptime:</span>';
           html += `<span class="stats-value">${stats.uptime}</span>`;
-          
+
           html += '<span class="stats-label">Load Average:</span>';
           html += `<span class="stats-value">${stats.loadAverage}</span>`;
-          
+
           html += '<span class="stats-label">OS Version:</span>';
           html += `<span class="stats-value">${stats.osVersion}</span>`;
-          
+
           html += '<span class="stats-label">IP Address:</span>';
           html += `<span class="stats-value">${stats.ipAddress}</span>`;
-          
+
           html += '<span class="stats-label">WiFi Signal:</span>';
           html += `<span class="stats-value">${stats.wifiSignal}${stats.wifiSignal !== 'N/A' ? ' dBm' : ''}</span>`;
-          
+
           html += '<span class="stats-label">Temperature:</span>';
           html += `<span class="stats-value">${stats.temperature}</span>`;
-          
+
           html += '<span class="stats-label">Disk Space:</span>';
           html += `<span class="stats-value">${stats.diskSpace}</span>`;
-          
+
           html += '<span class="stats-label">Memory:</span>';
           html += `<span class="stats-value">${stats.memory}</span>`;
-          
+
           if (stats.vnstatToday !== 'N/A') {
             html += '<span class="stats-label">Network (Today):</span>';
             html += `<span class="stats-value">${stats.vnstatToday}</span>`;
           }
-          
+
           if (stats.vnstatWeek !== 'N/A') {
             html += '<span class="stats-label">Network (Week):</span>';
             html += `<span class="stats-value">${stats.vnstatWeek}</span>`;
           }
-          
+
           if (stats.vnstatMonth !== 'N/A') {
             html += '<span class="stats-label">Network (Month):</span>';
             html += `<span class="stats-value">${stats.vnstatMonth}</span>`;
           }
-          
+
           statsContent.innerHTML = html;
         })
         .catch(error => {
@@ -801,7 +834,7 @@
 
     function renderScheduleList(schedules) {
       const scheduleList = document.getElementById('scheduleList');
-      
+
       if (schedules.length === 0) {
         scheduleList.innerHTML = '<div style="color: #aaa; text-align: center; padding: 20px;">No schedules configured</div>';
         return;
@@ -895,7 +928,7 @@
     }
 
     // Close modal when clicking outside of it
-    window.onclick = function(event) {
+    window.onclick = function (event) {
       const updateModal = document.getElementById('updateModal');
       const statsModal = document.getElementById('statsModal');
       const scheduleModal = document.getElementById('scheduleModal');
