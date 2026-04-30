@@ -143,7 +143,9 @@ app.get('/brightness-schedule', (req, res) => {
 
     const lines = stdout.trim().split('\n').filter(line => line.includes('brightness-schedule'));
     const schedules = lines.map(line => {
-      const match = line.match(/^(\d+)\s+(\d+)\s+\*\s+\*\s+\*\s+.*brightness-schedule.*?(\d+)$/);
+      // Cron line format written by POST /brightness-schedule:
+      //   MIN HOUR * * * echo BRIGHTNESS | sudo -n tee /sys/class/backlight/.../brightness # brightness-schedule
+      const match = line.match(/^(\d+)\s+(\d+)\s+\*\s+\*\s+\*\s+echo\s+(\d+)\s+\|.*brightness-schedule/);
       if (match) {
         return { hour: match[2], minute: match[1], brightness: match[3] };
       }
