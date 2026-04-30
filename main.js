@@ -10,7 +10,7 @@ app.use(express.static('public'));
 
 app.get('/shutdown', (req, res) => {
   console.log('Request received to power off system');
-  exec('sudo shutdown now', (error, stdout, stderr) => {
+  exec('sudo -n shutdown now', (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`);
       return res.status(500).send('Error powering off');
@@ -21,7 +21,7 @@ app.get('/shutdown', (req, res) => {
 
 app.get('/reboot', (req, res) => {
   console.log('Request received to reboot system');
-  exec('sudo reboot', (error, stdout, stderr) => {
+  exec('sudo -n reboot', (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`);
       return res.status(500).send('Error rebooting');
@@ -38,33 +38,33 @@ app.get('/update', (req, res) => {
   updateInProgress = true;
   updateOutput = [];
   res.send('Update started');
-  
+
   // Broadcast start message
   const startMsg = '=== Starting system update ===\n';
   updateOutput.push(startMsg);
   updateClients.forEach(client => client.write(`data: ${JSON.stringify({ message: startMsg, done: false })}\n\n`));
-  
+
   // Use spawn for real-time output
-  const updateProcess = spawn('bash', ['-c', 'sudo apt-get update && sudo apt-get upgrade -y']);
-  
+  const updateProcess = spawn('bash', ['-c', 'sudo -n apt-get update && sudo -n apt-get upgrade -y']);
+
   updateProcess.stdout.on('data', (data) => {
     const message = data.toString();
     updateOutput.push(message);
     console.log(message);
     updateClients.forEach(client => client.write(`data: ${JSON.stringify({ message, done: false })}\n\n`));
   });
-  
+
   updateProcess.stderr.on('data', (data) => {
     const message = data.toString();
     updateOutput.push(message);
     console.error(message);
     updateClients.forEach(client => client.write(`data: ${JSON.stringify({ message, done: false })}\n\n`));
   });
-  
+
   updateProcess.on('close', (code) => {
     updateInProgress = false;
-    const finishMsg = code === 0 
-      ? '\n=== Update completed successfully ===\n' 
+    const finishMsg = code === 0
+      ? '\n=== Update completed successfully ===\n'
       : `\n=== Update failed with exit code ${code} ===\n`;
     updateOutput.push(finishMsg);
     console.log(finishMsg);
@@ -78,15 +78,15 @@ app.get('/update-status', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
-  
+
   // Send existing output
   updateOutput.forEach(line => {
     res.write(`data: ${JSON.stringify({ message: line, done: false })}\n\n`);
   });
-  
+
   // Add client to list for future updates
   updateClients.push(res);
-  
+
   // Remove client when connection closes
   req.on('close', () => {
     updateClients = updateClients.filter(client => client !== res);
@@ -95,7 +95,7 @@ app.get('/update-status', (req, res) => {
 
 app.get('/restart-lightdm', (req, res) => {
   console.log('Request received to restart lightdm');
-  exec('sudo systemctl restart lightdm', (error, stdout, stderr) => {
+  exec('sudo -n systemctl restart lightdm', (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`);
       return res.status(500).send('Error restarting lightdm');
@@ -119,12 +119,12 @@ app.get('/brightness', (req, res) => {
 app.post('/brightness/:level', (req, res) => {
   const level = parseInt(req.params.level);
   console.log(`Request received to set brightness to ${level}`);
-  
+
   if (isNaN(level) || level < 0 || level > 31) {
     return res.status(400).send('Brightness level must be between 0 and 31');
   }
-  
-  exec(`echo ${level} | sudo tee /sys/class/backlight/10-0045/brightness`, (error, stdout, stderr) => {
+
+  exec(`echo ${level} | sudo -n tee /sys/class/backlight/10-0045/brightness`, (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`);
       return res.status(500).send('Error setting brightness');
@@ -140,7 +140,7 @@ app.get('/brightness-schedule', (req, res) => {
       // No crontab or no matching entries
       return res.json({ schedules: [] });
     }
-    
+
     const lines = stdout.trim().split('\n').filter(line => line.includes('brightness-schedule'));
     const schedules = lines.map(line => {
       const match = line.match(/^(\d+)\s+(\d+)\s+\*\s+\*\s+\*\s+.*brightness-schedule.*?(\d+)$/);
@@ -149,7 +149,7 @@ app.get('/brightness-schedule', (req, res) => {
       }
       return null;
     }).filter(s => s !== null);
-    
+
     res.json({ schedules });
   });
 });
@@ -157,27 +157,27 @@ app.get('/brightness-schedule', (req, res) => {
 app.post('/brightness-schedule', express.json(), (req, res) => {
   console.log('Request received to update brightness schedule');
   const { schedules } = req.body;
-  
+
   if (!Array.isArray(schedules)) {
     return res.status(400).send('Invalid schedule format');
   }
-  
+
   // Remove existing brightness schedule entries
   exec('(crontab -l 2>/dev/null | grep -v "brightness-schedule" || true) | crontab -', (error) => {
     if (error) {
       console.error(`exec error: ${error}`);
       return res.status(500).send('Error updating schedule');
     }
-    
+
     if (schedules.length === 0) {
       return res.send('Schedule cleared');
     }
-    
+
     // Add new schedule entries
-    const cronEntries = schedules.map(s => 
-      `${s.minute} ${s.hour} * * * echo ${s.brightness} | sudo tee /sys/class/backlight/10-0045/brightness # brightness-schedule`
+    const cronEntries = schedules.map(s =>
+      `${s.minute} ${s.hour} * * * echo ${s.brightness} | sudo -n tee /sys/class/backlight/10-0045/brightness # brightness-schedule`
     ).join('\n');
-    
+
     exec(`(crontab -l 2>/dev/null || true; echo "${cronEntries}") | crontab -`, (error) => {
       if (error) {
         console.error(`exec error: ${error}`);
@@ -190,7 +190,7 @@ app.post('/brightness-schedule', express.json(), (req, res) => {
 
 app.get('/system-stats', (req, res) => {
   console.log('Request received for system stats');
-  
+
   const commands = {
     hardwareModel: "cat /proc/device-tree/model 2>/dev/null | tr -d '\\0' || echo 'N/A'",
     uptime: "uptime -p",
@@ -215,7 +215,7 @@ app.get('/system-stats', (req, res) => {
     exec(command, (error, stdout, stderr) => {
       stats[key] = error ? 'N/A' : stdout.trim();
       completed++;
-      
+
       if (completed === total) {
         res.json(stats);
       }
