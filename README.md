@@ -2,6 +2,8 @@
 
 A comprehensive touchscreen management interface for Raspberry Pi devices running Home Assistant dashboards. This application provides a touch-optimized UI for managing your Raspberry Pi without requiring keyboard/mouse access or remote connections—perfect for wall-mounted or dedicated Home Assistant touchscreens.
 
+See [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) for the deployed Pi's boot flow, graphics stack, kiosk recovery design, and performance-critical configuration.
+
 ## Features
 
 ### System Management
