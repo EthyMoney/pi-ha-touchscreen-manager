@@ -5,10 +5,12 @@
       "script": "/home/display/pi-ha-touchscreen-manager/main.js",
       "watch": true,
       "env": {
-        "NODE_ENV": "development"
+        "NODE_ENV": "development",
+        "HOME_ASSISTANT_URL": "http://192.168.1.216:8123"
       },
       "env_production": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "HOME_ASSISTANT_URL": "http://192.168.1.216:8123"
       }
     }
   ]
