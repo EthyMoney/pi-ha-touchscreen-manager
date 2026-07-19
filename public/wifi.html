@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>WiFi Recovery</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Arial, sans-serif;
+      --panel: #181d25;
+      --panel-2: #222a35;
+      --border: #354151;
+      --blue: #3aa7ff;
+      --green: #40c977;
+      --red: #ff6666;
+      --muted: #aeb8c5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      color: #fff;
+      background: radial-gradient(circle at 15% 0%, #173451 0, #0e1218 45%);
+      touch-action: manipulation;
+    }
+    button, input { font: inherit; }
+    button { touch-action: manipulation; }
+    header {
+      height: 78px;
+      padding: 12px 22px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(12, 16, 22, .92);
+    }
+    .wifi-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      font-size: 27px;
+      background: #153d5d;
+    }
+    h1 { margin: 0; font-size: 26px; }
+    .subtitle { margin-top: 3px; color: var(--muted); font-size: 14px; }
+    .header-actions { margin-left: auto; display: flex; gap: 10px; }
+    .action {
+      min-height: 50px;
+      padding: 0 20px;
+      color: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel-2);
+      font-weight: 700;
+    }
+    .action.primary { background: #1876bd; border-color: #228dde; }
+    .action:disabled { opacity: .45; }
+    main {
+      height: calc(100vh - 78px);
+      padding: 16px 22px 20px;
+      display: grid;
+      grid-template-columns: minmax(460px, 1.2fr) minmax(380px, .8fr);
+      gap: 16px;
+    }
+    .panel {
+      min-height: 0;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(24, 29, 37, .96);
+      overflow: hidden;
+    }
+    .panel-title {
+      height: 56px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      font-size: 18px;
+      font-weight: 700;
+      border-bottom: 1px solid var(--border);
+    }
+    #scanStatus { margin-left: auto; color: var(--muted); font-size: 13px; font-weight: 400; }
+    #networkList { height: calc(100% - 56px); overflow-y: auto; }
+    .network {
+      width: 100%;
+      min-height: 67px;
+      margin: 0;
+      padding: 10px 16px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      color: #fff;
+      text-align: left;
+      border: 0;
+      border-bottom: 1px solid #2b3441;
+      background: transparent;
+    }
+    .network:active, .network.selected { background: #26384a; }
+    .network-name { font-size: 18px; font-weight: 700; overflow-wrap: anywhere; }
+    .network-meta { margin-top: 4px; color: var(--muted); font-size: 13px; }
+    .signal { font-size: 22px; color: var(--blue); }
+    .connected { color: var(--green); font-weight: 700; }
+    .empty { padding: 40px; text-align: center; color: var(--muted); }
+    .details { padding: 18px; display: flex; flex-direction: column; height: 100%; }
+    .status-card {
+      padding: 14px;
+      border-radius: 12px;
+      background: #11161d;
+      border: 1px solid #303b49;
+    }
+    .status-line { display: flex; gap: 10px; align-items: center; }
+    .dot { width: 11px; height: 11px; border-radius: 50%; background: #788391; }
+    .dot.good { background: var(--green); box-shadow: 0 0 10px rgba(64, 201, 119, .5); }
+    .dot.bad { background: var(--red); }
+    #connectionSummary { margin-top: 7px; color: var(--muted); font-size: 14px; }
+    #autoReturnStatus { margin-top: 9px; color: var(--green); font-size: 14px; font-weight: 700; }
+    #selectedBox { margin-top: 18px; }
+    #selectedName { margin: 0 0 4px; font-size: 25px; overflow-wrap: anywhere; }
+    #selectedSecurity { color: var(--muted); font-size: 14px; }
+    label { display: block; margin: 18px 0 7px; color: #d7dee7; font-weight: 700; }
+    .password-row { display: flex; gap: 8px; }
+    #password {
+      min-width: 0;
+      height: 55px;
+      flex: 1;
+      padding: 0 14px;
+      color: #fff;
+      border: 2px solid #465466;
+      border-radius: 11px;
+      outline: 0;
+      background: #0c1016;
+      font-size: 19px;
+    }
+    #password:focus { border-color: var(--blue); }
+    .icon-button {
+      width: 58px;
+      min-width: 58px;
+      margin: 0;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      color: #fff;
+      background: var(--panel-2);
+      font-size: 21px;
+    }
+    #connectButton { width: 100%; margin-top: 14px; }
+    #message { min-height: 42px; margin-top: 12px; color: var(--muted); line-height: 1.35; }
+    #message.error { color: #ff8a8a; }
+    #message.success { color: #68dc97; }
+    .details-footer { margin-top: auto; color: #8290a0; font-size: 12px; line-height: 1.4; }
+    #keyboard {
+      position: fixed;
+      z-index: 20;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 8px 10px 10px;
+      background: rgba(11, 14, 19, .98);
+      border-top: 2px solid #3f4c5d;
+      transform: translateY(105%);
+      transition: transform .14s ease-out;
+    }
+    #keyboard.open { transform: translateY(0); }
+    .key-row { display: flex; justify-content: center; gap: 5px; margin-top: 5px; }
+    .key {
+      height: 47px;
+      min-width: 48px;
+      padding: 0 11px;
+      margin: 0;
+      color: #fff;
+      border: 1px solid #526073;
+      border-radius: 7px;
+      background: #27313e;
+      font-size: 18px;
+      font-weight: 700;
+      box-shadow: 0 2px 0 #080a0e;
+    }
+    .key:active { background: #3b82b8; transform: translateY(1px); }
+    .key.wide { min-width: 90px; }
+    .key.space { min-width: 280px; }
+    .key.active { background: #176da8; }
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; overflow-y: auto; }
+      .panel { min-height: 420px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wifi-icon">◉</div>
+    <div>
+      <h1>WiFi Recovery</h1>
+      <div class="subtitle">Connect this display to the network, then return to Home Assistant.</div>
+    </div>
+    <div class="header-actions">
+      <button class="action" id="managerButton">Device controls</button>
+      <button class="action" id="refreshButton">Refresh networks</button>
+      <button class="action primary" id="dashboardButton" disabled>Return to dashboard</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="panel-title">Available networks <span id="scanStatus">Loading…</span></div>
+      <div id="networkList"><div class="empty">Scanning for WiFi networks…</div></div>
+    </section>
+
+    <section class="panel details">
+      <div class="status-card">
+        <div class="status-line"><span class="dot" id="statusDot"></span><strong id="statusTitle">Checking connection…</strong></div>
+        <div id="connectionSummary"></div>
+        <div id="autoReturnStatus" hidden></div>
+      </div>
+
+      <div id="selectedBox" hidden>
+        <h2 id="selectedName"></h2>
+        <div id="selectedSecurity"></div>
+        <div id="passwordBox">
+          <label for="password">WiFi password</label>
+          <div class="password-row">
+            <input id="password" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" readonly>
+            <button class="icon-button" id="showPassword" aria-label="Show password">●</button>
+            <button class="icon-button" id="showKeyboard" aria-label="Show keyboard">⌨</button>
+          </div>
+        </div>
+        <button class="action primary" id="connectButton">Connect</button>
+        <div id="message"></div>
+      </div>
+
+      <div class="details-footer">
+        The recovery page runs entirely on this Raspberry Pi, so it remains available without WiFi or Ethernet.
+      </div>
+    </section>
+  </main>
+
+  <div id="keyboard" aria-label="On-screen keyboard"></div>
+
+  <script>
+    const state = {
+      networks: [],
+      selected: null,
+      dashboardUrl: 'http://192.168.1.216:8123',
+      shifted: false,
+      symbols: false,
+      connecting: false,
+      dashboardUnavailableObserved: new URLSearchParams(window.location.search).has('reason'),
+      autoReturnDeadline: null,
+      autoReturnTimer: null,
+      returnCheckInProgress: false
+    };
+
+    const list = document.getElementById('networkList');
+    const scanStatus = document.getElementById('scanStatus');
+    const selectedBox = document.getElementById('selectedBox');
+    const passwordBox = document.getElementById('passwordBox');
+    const passwordInput = document.getElementById('password');
+    const message = document.getElementById('message');
+    const keyboard = document.getElementById('keyboard');
+    const dashboardButton = document.getElementById('dashboardButton');
+    const autoReturnStatus = document.getElementById('autoReturnStatus');
+
+    function signalGlyph(signal) {
+      if (signal >= 75) return '▂▄▆█';
+      if (signal >= 50) return '▂▄▆·';
+      if (signal >= 25) return '▂▄··';
+      return '▂···';
+    }
+
+    function renderNetworks() {
+      list.replaceChildren();
+      if (!state.networks.length) {
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'No WiFi networks found. Move closer to the access point and refresh.';
+        list.append(empty);
+        return;
+      }
+
+      state.networks.forEach((network) => {
+        const button = document.createElement('button');
+        button.className = 'network' + (state.selected?.ssid === network.ssid ? ' selected' : '');
+        const text = document.createElement('div');
+        const name = document.createElement('div');
+        const meta = document.createElement('div');
+        const signal = document.createElement('div');
+        name.className = 'network-name';
+        name.textContent = network.ssid;
+        meta.className = 'network-meta';
+        meta.textContent = network.connected ? 'Connected' : `${network.security} · ${network.signal}%`;
+        if (network.connected) meta.classList.add('connected');
+        signal.className = 'signal';
+        signal.textContent = signalGlyph(network.signal);
+        text.append(name, meta);
+        button.append(text, signal);
+        button.addEventListener('click', () => selectNetwork(network));
+        list.append(button);
+      });
+    }
+
+    function selectNetwork(network) {
+      state.selected = network;
+      selectedBox.hidden = false;
+      document.getElementById('selectedName').textContent = network.ssid;
+      document.getElementById('selectedSecurity').textContent = `${network.security} · Signal ${network.signal}%`;
+      const open = network.security === 'Open' || network.security === '--';
+      passwordBox.hidden = open;
+      passwordInput.value = '';
+      message.textContent = network.connected ? 'This is the current WiFi connection.' : '';
+      message.className = network.connected ? 'success' : '';
+      document.getElementById('connectButton').textContent = network.connected ? 'Reconnect' : 'Connect';
+      closeKeyboard();
+      renderNetworks();
+    }
+
+    function cancelAutoReturnCountdown() {
+      if (state.autoReturnTimer) clearInterval(state.autoReturnTimer);
+      state.autoReturnTimer = null;
+      state.autoReturnDeadline = null;
+      autoReturnStatus.hidden = true;
+      autoReturnStatus.textContent = '';
+    }
+
+    function updateAutoReturnCountdown() {
+      if (!state.autoReturnDeadline) return;
+      const seconds = Math.max(0, Math.ceil((state.autoReturnDeadline - Date.now()) / 1000));
+      autoReturnStatus.hidden = false;
+      autoReturnStatus.textContent = `Returning to Home Assistant in ${seconds} second${seconds === 1 ? '' : 's'}…`;
+
+      if (seconds === 0) {
+        clearInterval(state.autoReturnTimer);
+        state.autoReturnTimer = null;
+        finishAutoReturn();
+      }
+    }
+
+    function startAutoReturnCountdown() {
+      if (state.autoReturnDeadline) return;
+      state.autoReturnDeadline = Date.now() + 15000;
+      updateAutoReturnCountdown();
+      state.autoReturnTimer = setInterval(updateAutoReturnCountdown, 250);
+    }
+
+    async function finishAutoReturn() {
+      if (state.returnCheckInProgress) return;
+      state.returnCheckInProgress = true;
+      try {
+        const response = await fetch('/api/dashboard/status', { cache: 'no-store' });
+        const dashboard = await response.json();
+        if (!response.ok || !dashboard.reachable) throw new Error('Home Assistant became unavailable');
+        state.dashboardUrl = dashboard.homeAssistantUrl || state.dashboardUrl;
+        window.location.replace(state.dashboardUrl);
+      } catch (error) {
+        state.dashboardUnavailableObserved = true;
+        cancelAutoReturnCountdown();
+        document.getElementById('statusDot').className = 'dot bad';
+        document.getElementById('statusTitle').textContent = 'Home Assistant became unavailable';
+        dashboardButton.disabled = true;
+      } finally {
+        state.returnCheckInProgress = false;
+      }
+    }
+
+    async function refreshStatus() {
+      try {
+        const [networkResponse, dashboardResponse] = await Promise.all([
+          fetch('/api/wifi/status', { cache: 'no-store' }),
+          fetch('/api/dashboard/status', { cache: 'no-store' })
+        ]);
+        const network = await networkResponse.json();
+        const dashboard = await dashboardResponse.json();
+        state.dashboardUrl = dashboard.homeAssistantUrl || state.dashboardUrl;
+
+        const wifiConnected = network.wifi?.state === 'connected';
+        const networkAvailable = wifiConnected || network.ethernetConnected;
+        const dot = document.getElementById('statusDot');
+        dot.className = `dot ${dashboard.reachable ? 'good' : networkAvailable ? '' : 'bad'}`;
+        document.getElementById('statusTitle').textContent = dashboard.reachable
+          ? 'Home Assistant is reachable'
+          : networkAvailable ? 'Network connected; Home Assistant unavailable' : 'No network connection';
+        document.getElementById('connectionSummary').textContent = wifiConnected
+          ? `WiFi: ${network.wifi.connection}`
+          : network.ethernetConnected ? 'Using Ethernet' : 'Select a WiFi network below.';
+        dashboardButton.disabled = !dashboard.reachable;
+
+        if (dashboard.reachable) {
+          if (state.dashboardUnavailableObserved) startAutoReturnCountdown();
+        } else {
+          state.dashboardUnavailableObserved = true;
+          cancelAutoReturnCountdown();
+        }
+        return dashboard.reachable;
+      } catch (error) {
+        state.dashboardUnavailableObserved = true;
+        cancelAutoReturnCountdown();
+        document.getElementById('statusDot').className = 'dot bad';
+        document.getElementById('statusTitle').textContent = 'Unable to check network status';
+        dashboardButton.disabled = true;
+        return false;
+      }
+    }
+
+    async function scanNetworks() {
+      scanStatus.textContent = 'Scanning…';
+      document.getElementById('refreshButton').disabled = true;
+      try {
+        const response = await fetch('/api/wifi/networks?rescan=true', { cache: 'no-store' });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Scan failed');
+        state.networks = data.networks;
+        scanStatus.textContent = `${state.networks.length} found`;
+        renderNetworks();
+      } catch (error) {
+        scanStatus.textContent = 'Scan failed';
+        list.innerHTML = '<div class="empty">Unable to scan. Wait a moment, then try again.</div>';
+      } finally {
+        document.getElementById('refreshButton').disabled = false;
+      }
+    }
+
+    async function connect() {
+      if (!state.selected || state.connecting) return;
+      state.connecting = true;
+      const connectButton = document.getElementById('connectButton');
+      connectButton.disabled = true;
+      connectButton.textContent = 'Connecting…';
+      message.className = '';
+      message.textContent = `Connecting to ${state.selected.ssid}…`;
+      closeKeyboard();
+
+      try {
+        const response = await fetch('/api/wifi/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ssid: state.selected.ssid, password: passwordInput.value })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Connection failed');
+
+        message.className = 'success';
+        message.textContent = 'Connected. Checking Home Assistant…';
+        const dashboardReachable = await refreshStatus();
+        await scanNetworks();
+        message.textContent = dashboardReachable
+          ? 'Connected. Home Assistant is available; automatic return countdown started.'
+          : 'WiFi connected, but Home Assistant is not reachable yet. Automatic return will start when it becomes available.';
+      } catch (error) {
+        message.className = 'error';
+        message.textContent = error.message;
+      } finally {
+        state.connecting = false;
+        connectButton.disabled = false;
+        connectButton.textContent = 'Connect';
+      }
+    }
+
+    const letterRows = [
+      ['1','2','3','4','5','6','7','8','9','0','-','='],
+      ['q','w','e','r','t','y','u','i','o','p'],
+      ['a','s','d','f','g','h','j','k','l'],
+      ['z','x','c','v','b','n','m','.','_']
+    ];
+    const symbolRows = [
+      ['!','@','#','$','%','^','&','*','(',')','-','+'],
+      ['~','`','[',']','{','}','<','>','/','?'],
+      [';',':',"'",'"',',','.','\\','|','='],
+      ['1','2','3','4','5','6','7','8','9','0']
+    ];
+
+    function renderKeyboard() {
+      keyboard.replaceChildren();
+      const rows = state.symbols ? symbolRows : letterRows;
+      rows.forEach((keys, index) => {
+        const row = document.createElement('div');
+        row.className = 'key-row';
+        if (index === 3 && !state.symbols) row.append(makeKey('Shift', 'shift', true));
+        keys.forEach((key) => row.append(makeKey(state.shifted && !state.symbols ? key.toUpperCase() : key, key)));
+        if (index === 3) row.append(makeKey('⌫', 'backspace', true));
+        keyboard.append(row);
+      });
+      const controls = document.createElement('div');
+      controls.className = 'key-row';
+      controls.append(
+        makeKey(state.symbols ? 'ABC' : '#+=', 'symbols', true),
+        makeKey('Space', ' ', false, 'space'),
+        makeKey('Hide', 'hide', true)
+      );
+      keyboard.append(controls);
+    }
+
+    function makeKey(label, value, wide = false, extraClass = '') {
+      const key = document.createElement('button');
+      key.className = `key${wide ? ' wide' : ''}${extraClass ? ` ${extraClass}` : ''}${value === 'shift' && state.shifted ? ' active' : ''}`;
+      key.textContent = label;
+      key.addEventListener('click', () => typeKey(value));
+      return key;
+    }
+
+    function typeKey(key) {
+      if (key === 'backspace') passwordInput.value = passwordInput.value.slice(0, -1);
+      else if (key === 'shift') { state.shifted = !state.shifted; renderKeyboard(); }
+      else if (key === 'symbols') { state.symbols = !state.symbols; state.shifted = false; renderKeyboard(); }
+      else if (key === 'hide') closeKeyboard();
+      else {
+        passwordInput.value += state.shifted && !state.symbols ? key.toUpperCase() : key;
+        if (state.shifted) { state.shifted = false; renderKeyboard(); }
+      }
+    }
+
+    function openKeyboard() { renderKeyboard(); keyboard.classList.add('open'); }
+    function closeKeyboard() { keyboard.classList.remove('open'); }
+
+    document.getElementById('refreshButton').addEventListener('click', scanNetworks);
+    document.getElementById('connectButton').addEventListener('click', connect);
+    document.getElementById('managerButton').addEventListener('click', () => { window.location.href = '/'; });
+    dashboardButton.addEventListener('click', () => { window.location.href = state.dashboardUrl; });
+    document.getElementById('showKeyboard').addEventListener('click', openKeyboard);
+    passwordInput.addEventListener('click', openKeyboard);
+    document.getElementById('showPassword').addEventListener('click', () => {
+      passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
+    });
+
+    refreshStatus();
+    scanNetworks();
+    setInterval(refreshStatus, 5000);
+  </script>
+</body>
+</html>

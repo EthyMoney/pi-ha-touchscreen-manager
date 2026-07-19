@@ -14,7 +14,7 @@ A comprehensive touchscreen management interface for Raspberry Pi devices runnin
 - **Real-time System Stats** - View comprehensive system information including:
   - Hardware model and OS version
   - System uptime and load average
-  - IP address and WiFi signal strength (dBm)
+  - IP addresses, active WiFi network, and signal percentage
   - CPU temperature
   - Disk space usage
   - Memory usage (displayed in GB)
@@ -28,10 +28,19 @@ A comprehensive touchscreen management interface for Raspberry Pi devices runnin
   - Multiple schedules supported
   - Easy-to-use time picker interface
 
+### WiFi Recovery
+- Redirects failed Home Assistant navigations to a local recovery page that works offline
+- Checks dashboard reachability every 30 seconds, including when a loaded dashboard becomes stale; two failed checks are required before proactive recovery
+- While the recovery page is open, automatically returns to Home Assistant after it remains reachable for 15 seconds
+- Scans nearby networks and connects through NetworkManager
+- Includes an on-screen keyboard for password entry
+- Checks Home Assistant reachability and returns to the dashboard after recovery
+
 ### Touch-Optimized UI
 - Large, finger-friendly buttons sized for 7" touchscreens
-- Animated background with floating color orbs
-- Modal dialogs for detailed information and settings
+- Professional dashboard layout shared with the WiFi recovery interface
+- Live system health, network, brightness, and schedule summaries without opening extra panels
+- Custom confirmation, update, schedule, and notification dialogs
 - Responsive design optimized for touchscreen interaction
 
 ## Prerequisites
@@ -59,7 +68,7 @@ This is meant to be run on the Raspberry Pi itself. You can clone the repository
     sudo npm install
     ```
 
-3. Change the Home Assistant URL in the goBack() function at the bottom of the `public/index.html` file to your Home Assistant URL. This is where the "Back to Home Assistant" button will navigate to and needs to point to your Home Assistant instance.
+3. Set `HOME_ASSISTANT_URL` in both environments in `process.json` to your Home Assistant URL.
 
 4. (Optional) Start the app (just to test, use PM2 for normal operation):
 
@@ -90,15 +99,16 @@ This is meant to be run on the Raspberry Pi itself. You can clone the repository
 ## Usage
 
 ### Main Interface
-The main screen provides large, touch-friendly buttons for common tasks:
+The main screen provides a live system overview and touch-friendly controls:
 - **Back to Home Assistant** - Returns to your configured Home Assistant URL
 - **Shutdown** - Powers down the Pi (with confirmation)
 - **Reboot** - Restarts the Pi (with confirmation)
 - **Update** - Runs system updates with live output display
 - **Restart Display** - Restarts the LightDM display manager
+- **WiFi** - Opens the local network recovery interface
 
 ### System Stats
-Click the **ℹ️ info button** in the top-right corner to view:
+The main dashboard refreshes these statistics automatically:
 - Hardware model and configuration
 - System uptime and load
 - Operating system details
@@ -109,7 +119,7 @@ Click the **ℹ️ info button** in the top-right corner to view:
 - Network statistics from vnstat
 
 ### Display Brightness
-The **brightness control** in the bottom-left corner allows you to:
+The **Display** panel allows you to:
 - Adjust screen brightness with a slider
 - View current brightness percentage
 - Set up automated schedules via the schedule button
@@ -125,16 +135,22 @@ Click the **schedule button** next to brightness control to:
 
 ### API Endpoints
 - `GET /` - Serves the main UI
-- `GET /shutdown` - Initiates system shutdown
-- `GET /reboot` - Initiates system reboot
-- `GET /update` - Starts system update with real-time output
+- `POST /shutdown` - Initiates system shutdown (`GET` retained for compatibility)
+- `POST /reboot` - Initiates system reboot (`GET` retained for compatibility)
+- `POST /update` - Starts system update with real-time output (`GET` retained for compatibility)
 - `GET /update-status` - SSE endpoint for streaming update output
-- `GET /restart-lightdm` - Restarts display manager
-- `GET /brightness` - Returns current brightness level
-- `POST /brightness/:level` - Sets brightness (0-31 range)
+- `POST /restart-lightdm` - Restarts display manager (`GET` retained for compatibility)
+- `GET /brightness` - Returns the detected backlight, current level, hardware range, and percentage
+- `POST /brightness/:level` - Sets brightness within the detected hardware range
 - `GET /brightness-schedule` - Returns configured brightness schedules
 - `POST /brightness-schedule` - Updates brightness schedules
 - `GET /system-stats` - Returns comprehensive system information
+- `GET /wifi` - Serves the offline WiFi recovery interface
+- `GET /api/wifi/status` - Returns current WiFi and Ethernet state
+- `GET /api/wifi/networks` - Scans and returns nearby WiFi networks
+- `POST /api/wifi/connect` - Connects `wlan0` to the selected network
+- `GET /api/config` - Returns the configured Home Assistant URL
+- `GET /api/dashboard/status` - Checks Home Assistant reachability
 
 ### Technologies Used
 - **Backend**: Express.js with Server-Sent Events (SSE) for real-time updates
@@ -147,6 +163,8 @@ Click the **schedule button** next to brightness control to:
 
 - The app binds to localhost only for security (not accessible from network)
 - Requires sudo privileges for system management operations
-- Brightness control uses the `/sys/class/backlight/10-0045/brightness` path (adjust if your hardware differs)
+- Brightness control detects the active device under `/sys/class/backlight`; scheduled cron commands use a device-independent glob
 - Network statistics require vnstat to be installed and configured
-- WiFi signal strength readings require wireless-tools (iwconfig)
+- WiFi state and signal readings use NetworkManager (`nmcli`)
+- WiFi recovery uses `/usr/bin/nmcli`; run `/home/display/sudoers-setup.sh` as root after installation so the local app can manage NetworkManager non-interactively.
+- `HOME_ASSISTANT_URL` in `process.json` is the dashboard target used by the manager, startup, and recovery checks. `/home/display/start-chrome.sh` should continue opening the local `/kiosk` bootstrap URL.
