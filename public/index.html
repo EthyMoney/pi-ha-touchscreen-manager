@@ -1,1352 +1,818 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Raspberry Pi Control</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Pi Display Manager</title>
   <style>
-    body {
-      background-color: #121212;
-      color: #ffffff;
+    :root {
+      color-scheme: dark;
       font-family: Arial, sans-serif;
+      --bg: #0d1218;
+      --panel: #181d25;
+      --panel-2: #222a35;
+      --panel-3: #11161d;
+      --border: #354151;
+      --text: #f4f7fa;
+      --muted: #9da9b7;
+      --blue: #3aa7ff;
+      --blue-dark: #1876bd;
+      --green: #40c977;
+      --amber: #f2b84b;
+      --red: #ef6262;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      color: var(--text);
+      background: radial-gradient(circle at 10% 0%, #173451 0, var(--bg) 42%);
+      touch-action: manipulation;
+    }
+    button, input { font: inherit; }
+    button { touch-action: manipulation; }
+    header {
+      height: 76px;
+      padding: 11px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(12, 16, 22, .94);
+    }
+    .brand-mark {
+      width: 50px;
+      height: 50px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: #dff2ff;
+      background: #153d5d;
+      border: 1px solid #24577d;
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -.5px;
+    }
+    h1 { margin: 0; font-size: 24px; letter-spacing: -.3px; }
+    .subtitle { margin-top: 3px; color: var(--muted); font-size: 13px; }
+    .header-status {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .status-pill {
+      height: 42px;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #dbe4ed;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #141a22;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+    .status-dot.good { background: var(--green); box-shadow: 0 0 9px rgba(64, 201, 119, .55); }
+    .header-button, .button {
+      min-height: 48px;
+      padding: 0 18px;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: var(--panel-2);
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .header-button:active, .button:active { transform: translateY(1px); background: #2e3947; }
+    .button.primary { border-color: #258bd1; background: var(--blue-dark); }
+    .button.amber { border-color: #9f7832; background: #5a431f; color: #ffd98c; }
+    .button.danger { border-color: #9a4141; background: #542629; color: #ffaaaa; }
+    .button.ghost { background: transparent; }
+    .button:disabled { opacity: .45; cursor: default; }
+    main {
+      height: calc(100vh - 76px);
+      padding: 14px 20px 18px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(430px, .92fr);
+      gap: 14px;
+    }
+    .panel {
+      min-height: 0;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(24, 29, 37, .96);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, .16);
+    }
+    .panel-header {
+      height: 52px;
+      padding: 0 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-title { font-size: 17px; font-weight: 800; }
+    .panel-note { color: var(--muted); font-size: 12px; }
+    .panel-header .button { margin-left: auto; min-height: 36px; padding: 0 13px; font-size: 13px; }
+    .overview-body { height: calc(100% - 52px); padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .metric {
+      min-width: 0;
+      height: 104px;
+      padding: 12px;
+      border: 1px solid #303b49;
+      border-radius: 12px;
+      background: var(--panel-3);
+    }
+    .metric-label { color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+    .metric-value { margin-top: 8px; font-size: 23px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .metric-meta { margin-top: 5px; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .progress { height: 5px; margin-top: 9px; overflow: hidden; border-radius: 4px; background: #28313d; }
+    .progress span { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--blue); transition: width .2s; }
+    .progress span.warn { background: var(--amber); }
+    .progress span.danger { background: var(--red); }
+    .network-card {
+      padding: 12px 14px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px 20px;
+      border: 1px solid #303b49;
+      border-radius: 12px;
+      background: #131921;
+    }
+    .network-title { font-size: 15px; font-weight: 800; }
+    .network-address { color: var(--blue); font-family: monospace; font-size: 15px; font-weight: 700; }
+    .network-meta { color: var(--muted); font-size: 12px; }
+    .signal-bars { color: var(--blue); letter-spacing: 1px; font-size: 17px; }
+    .details-grid {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 18px;
+      padding: 2px 4px;
+    }
+    .detail-row {
+      min-width: 0;
+      min-height: 37px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid #29323e;
+      font-size: 12px;
+    }
+    .detail-label { color: var(--muted); }
+    .detail-value { max-width: 70%; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
+    .right-column { min-height: 0; display: grid; grid-template-rows: 280px minmax(0, 1fr); gap: 14px; }
+    .display-body { padding: 15px; }
+    .brightness-top { display: flex; align-items: flex-end; justify-content: space-between; }
+    .brightness-value { font-size: 36px; line-height: 1; font-weight: 800; }
+    .brightness-device { margin-top: 5px; color: var(--muted); font-size: 12px; }
+    .range-wrap { margin-top: 14px; display: grid; grid-template-columns: 24px 1fr 30px; align-items: center; gap: 9px; }
+    input[type="range"] { width: 100%; height: 36px; accent-color: var(--blue); cursor: pointer; }
+    .schedule-bar {
+      margin-top: 13px;
+      padding-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-top: 1px solid #303b49;
+    }
+    .schedule-summary { min-width: 0; flex: 1; }
+    .schedule-summary strong { display: block; font-size: 14px; }
+    .schedule-summary span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .schedule-bar .button { min-height: 42px; padding: 0 15px; }
+    .actions-body { height: calc(100% - 52px); padding: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .action-button {
+      min-height: 0;
+      padding: 12px 14px;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
-      height: 100vh;
-      margin: 0;
-      overflow: hidden;
-    }
-
-    h1 {
-      margin-bottom: 30px;
-      font-size: 2.5rem;
-    }
-
-    button {
-      padding: 30px 50px;
-      margin: 15px;
+      color: var(--text);
+      text-align: left;
+      border: 1px solid #354151;
+      border-radius: 12px;
+      background: #202833;
       cursor: pointer;
-      border-radius: 15px;
-      border: none;
-      transition: background-color 0.3s, color 0.3s;
-      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
-      font-size: 1.5rem;
-      font-weight: bold;
-      min-width: 280px;
-      min-height: 80px;
     }
-
-    .shutdown {
-      background-color: #ff4c4c;
-      color: #ffffff;
-    }
-
-    .shutdown:hover {
-      background-color: #ff1a1a;
-    }
-
-    .reboot {
-      background-color: #ff7043;
-      color: #ffffff;
-    }
-
-    .reboot:hover {
-      background-color: #ff5722;
-    }
-
-    .update {
-      background-color: #2196f3;
-      color: #ffffff;
-    }
-
-    .update:hover {
-      background-color: #1976d2;
-    }
-
-    .restart-lightdm {
-      background-color: #ff9800;
-      color: #ffffff;
-    }
-
-    .restart-lightdm:hover {
-      background-color: #f57c00;
-    }
-
-    .home-assistant {
-      background-color: #4caf50;
-      color: #ffffff;
-    }
-
-    .home-assistant:hover {
-      background-color: #388e3c;
-    }
-
-    /* === Wild techy animated background ===
-       Layers (back to front):
-         .background      : pulsing gradient base + vignette, hue cycling
-         .bg-grid-floor   : 3D perspective grid scrolling toward viewer (Tron)
-         .bg-grid-ceiling : same, mirrored above the horizon
-         .bg-grid         : flat overlay grid (subtle parallax)
-         .bg-nodes        : 4 drifting glow blobs
-         .bg-particles    : floating dot particles drifting upward
-         .bg-noise        : faint static texture
-    */
-    .background {
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      overflow: hidden;
-      background:
-        radial-gradient(ellipse at 50% 35%, #1a0a3a 0%, #0a0820 50%, #04020a 100%);
-      animation: bg-hue 24s linear infinite;
-    }
-
-    @keyframes bg-hue {
-      0% {
-        filter: hue-rotate(0deg);
-      }
-
-      100% {
-        filter: hue-rotate(360deg);
-      }
-    }
-
-    /* --- 3D perspective grids (synthwave horizon) --- */
-    .bg-grid-floor,
-    .bg-grid-ceiling {
-      position: absolute;
-      left: -50%;
-      width: 200%;
-      height: 60%;
-      background-image:
-        linear-gradient(rgba(0, 230, 255, 0.55) 2px, transparent 2px),
-        linear-gradient(90deg, rgba(0, 230, 255, 0.55) 2px, transparent 2px);
-      background-size: 80px 80px;
-      transform-origin: 50% 0%;
-      animation: grid-rush 4s linear infinite;
-      pointer-events: none;
-      mix-blend-mode: screen;
-    }
-
-    .bg-grid-floor {
-      bottom: 0;
-      transform: perspective(420px) rotateX(60deg);
-      mask-image: linear-gradient(to top, black 30%, transparent 100%);
-      -webkit-mask-image: linear-gradient(to top, black 30%, transparent 100%);
-    }
-
-    .bg-grid-ceiling {
-      top: 0;
-      transform-origin: 50% 100%;
-      transform: perspective(420px) rotateX(-60deg);
-      mask-image: linear-gradient(to bottom, black 30%, transparent 100%);
-      -webkit-mask-image: linear-gradient(to bottom, black 30%, transparent 100%);
-      filter: hue-rotate(60deg);
-    }
-
-    @keyframes grid-rush {
-      0% {
-        background-position: 0 0;
-      }
-
-      100% {
-        background-position: 0 80px;
-      }
-    }
-
-    /* --- Flat overlay grid for extra depth --- */
-    .bg-grid {
-      position: absolute;
-      inset: -50%;
-      background-image:
-        linear-gradient(rgba(180, 100, 255, 0.10) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(180, 100, 255, 0.10) 1px, transparent 1px);
-      background-size: 24px 24px;
-      animation: grid-pan 12s linear infinite;
-      mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
-      -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
-      pointer-events: none;
-    }
-
-    @keyframes grid-pan {
-      0% {
-        background-position: 0 0;
-      }
-
-      100% {
-        background-position: 240px -240px;
-      }
-    }
-
-    /* --- Drifting glow nodes --- */
-    .bg-nodes {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-    }
-
-    .bg-nodes span {
-      position: absolute;
-      width: 420px;
-      height: 420px;
-      border-radius: 50%;
-      filter: blur(90px);
-      opacity: 0.7;
-      mix-blend-mode: screen;
-    }
-
-    .bg-nodes span:nth-child(1) {
-      background: radial-gradient(circle, #00d4ff 0%, transparent 70%);
-      top: 5%;
-      left: 5%;
-      animation: drift-a 14s ease-in-out infinite;
-    }
-
-    .bg-nodes span:nth-child(2) {
-      background: radial-gradient(circle, #b14bff 0%, transparent 70%);
-      bottom: 0%;
-      right: 5%;
-      animation: drift-b 18s ease-in-out infinite;
-    }
-
-    .bg-nodes span:nth-child(3) {
-      background: radial-gradient(circle, #ff3fa4 0%, transparent 70%);
-      top: 50%;
-      left: 50%;
-      width: 520px;
-      height: 520px;
-      animation: drift-c 22s ease-in-out infinite;
-    }
-
-    .bg-nodes span:nth-child(4) {
-      background: radial-gradient(circle, #3fffb0 0%, transparent 70%);
-      top: 70%;
-      left: 20%;
-      animation: drift-a 16s ease-in-out infinite reverse;
-    }
-
-    @keyframes drift-a {
-
-      0%,
-      100% {
-        transform: translate(0, 0) scale(1);
-      }
-
-      50% {
-        transform: translate(140px, 90px) scale(1.25);
-      }
-    }
-
-    @keyframes drift-b {
-
-      0%,
-      100% {
-        transform: translate(0, 0) scale(1);
-      }
-
-      50% {
-        transform: translate(-120px, -80px) scale(0.85);
-      }
-    }
-
-    @keyframes drift-c {
-
-      0%,
-      100% {
-        transform: translate(-50%, -50%) scale(1) rotate(0deg);
-      }
-
-      50% {
-        transform: translate(-30%, -65%) scale(1.3) rotate(180deg);
-      }
-    }
-
-    /* --- Floating particles --- */
-    .bg-particles {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      overflow: hidden;
-    }
-
-    .bg-particles i {
-      position: absolute;
-      bottom: -20px;
-      width: 4px;
-      height: 4px;
-      background: #7df9ff;
-      border-radius: 50%;
-      box-shadow: 0 0 8px #7df9ff, 0 0 16px #00b4ff;
-      opacity: 0;
-      animation: particle-rise linear infinite;
-    }
-
-    .bg-particles i:nth-child(1) {
-      left: 5%;
-      animation-duration: 9s;
-      animation-delay: -1s;
-    }
-
-    .bg-particles i:nth-child(2) {
-      left: 12%;
-      animation-duration: 13s;
-      animation-delay: -3s;
-      background: #ff70d4;
-      box-shadow: 0 0 8px #ff70d4, 0 0 16px #b14bff;
-    }
-
-    .bg-particles i:nth-child(3) {
-      left: 22%;
-      animation-duration: 11s;
-      animation-delay: -6s;
-    }
-
-    .bg-particles i:nth-child(4) {
-      left: 30%;
-      animation-duration: 15s;
-      animation-delay: -2s;
-      background: #7dff9b;
-      box-shadow: 0 0 8px #7dff9b, 0 0 16px #00ff8c;
-    }
-
-    .bg-particles i:nth-child(5) {
-      left: 38%;
-      animation-duration: 8s;
-      animation-delay: -4s;
-    }
-
-    .bg-particles i:nth-child(6) {
-      left: 47%;
-      animation-duration: 12s;
-      animation-delay: -7s;
-      background: #ffe070;
-      box-shadow: 0 0 8px #ffe070, 0 0 16px #ff9a00;
-    }
-
-    .bg-particles i:nth-child(7) {
-      left: 55%;
-      animation-duration: 10s;
-      animation-delay: -1s;
-    }
-
-    .bg-particles i:nth-child(8) {
-      left: 63%;
-      animation-duration: 14s;
-      animation-delay: -5s;
-      background: #ff70d4;
-      box-shadow: 0 0 8px #ff70d4, 0 0 16px #b14bff;
-    }
-
-    .bg-particles i:nth-child(9) {
-      left: 72%;
-      animation-duration: 9s;
-      animation-delay: -8s;
-    }
-
-    .bg-particles i:nth-child(10) {
-      left: 80%;
-      animation-duration: 13s;
-      animation-delay: -2s;
-      background: #7dff9b;
-      box-shadow: 0 0 8px #7dff9b, 0 0 16px #00ff8c;
-    }
-
-    .bg-particles i:nth-child(11) {
-      left: 88%;
-      animation-duration: 11s;
-      animation-delay: -6s;
-    }
-
-    .bg-particles i:nth-child(12) {
-      left: 95%;
-      animation-duration: 16s;
-      animation-delay: -3s;
-    }
-
-    @keyframes particle-rise {
-      0% {
-        transform: translateY(0) scale(0.6);
-        opacity: 0;
-      }
-
-      10% {
-        opacity: 1;
-      }
-
-      90% {
-        opacity: 1;
-      }
-
-      100% {
-        transform: translateY(-110vh) scale(1.4);
-        opacity: 0;
-      }
-    }
-
-    .bg-noise {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      opacity: 0.07;
-      mix-blend-mode: overlay;
-      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-    }
-
-    /* --- Dance till you're dead dogs --- */
-    .bg-dog {
-      position: absolute;
-      bottom: 0;
-      width: 38vmin;
-      height: 38vmin;
-      background: url("dancing-dog.gif") center bottom / contain no-repeat;
-      pointer-events: none;
-      opacity: 0.55;
-      mix-blend-mode: screen;
-      animation: dog-bob 1.4s ease-in-out infinite;
-    }
-
-    .bg-dog.left {
-      left: 2vmin;
-    }
-
-    .bg-dog.right {
-      right: 2vmin;
-      transform: scaleX(-1);
-      animation-delay: -0.7s;
-    }
-
-    @keyframes dog-bob {
-
-      0%,
-      100% {
-        translate: 0 0;
-      }
-
-      50% {
-        translate: 0 -10px;
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-
-      .background,
-      .bg-grid,
-      .bg-grid-floor,
-      .bg-grid-ceiling,
-      .bg-nodes span,
-      .bg-particles i {
-        animation: none;
-      }
-    }
-
+    .action-button:active { background: #2b3744; transform: translateY(1px); }
+    .action-button.update { border-color: #286998; background: #183a54; }
+    .action-button.reboot { border-color: #80632d; background: #49391e; }
+    .action-button.shutdown { border-color: #813c3f; background: #492427; }
+    .action-name { font-size: 16px; font-weight: 800; }
+    .action-description { margin-top: 5px; color: #abb5c1; font-size: 12px; line-height: 1.3; }
     .modal {
-      display: none;
       position: fixed;
       z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.8);
-    }
-
-    .modal-content {
-      background-color: #1e1e1e;
-      margin: 5% auto;
-      padding: 20px;
-      border: 1px solid #888;
-      border-radius: 10px;
-      width: 90%;
-      max-width: 800px;
-      max-height: 80vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #2196f3;
-    }
-
-    .modal-header h2 {
-      margin: 0;
-      color: #2196f3;
-    }
-
-    .close {
-      color: #aaa;
-      font-size: 36px;
-      font-weight: bold;
-      cursor: pointer;
-      padding: 10px;
-      min-width: 50px;
-      min-height: 50px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-    }
-
-    .close:hover,
-    .close:focus {
-      color: #fff;
-    }
-
-    .output-container {
-      flex: 1;
-      overflow-y: auto;
-      background-color: #0d0d0d;
-      padding: 15px;
-      border-radius: 5px;
-      font-family: 'Courier New', monospace;
-      font-size: 12px;
-      line-height: 1.4;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      margin-bottom: 15px;
-    }
-
-    .status-bar {
-      padding: 10px;
-      border-radius: 5px;
-      text-align: center;
-      font-weight: bold;
-    }
-
-    .status-running {
-      background-color: #1976d2;
-    }
-
-    .status-success {
-      background-color: #388e3c;
-    }
-
-    .status-error {
-      background-color: #d32f2f;
-    }
-
-    .info-button {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      width: 50px;
-      height: 50px;
-      min-width: 50px;
-      min-height: 50px;
-      padding: 0;
-      margin: 0;
-      border-radius: 50%;
-      background-color: rgba(33, 150, 243, 0.8);
-      color: white;
-      border: none;
-      font-size: 24px;
-      font-weight: bold;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-      transition: background-color 0.3s, transform 0.2s;
-      z-index: 100;
-    }
-
-    .info-button:hover {
-      background-color: rgba(25, 118, 210, 1);
-      transform: scale(1.1);
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 12px 20px;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-    }
-
-    .stats-label {
-      font-weight: bold;
-      color: #2196f3;
-      text-align: right;
-    }
-
-    .stats-value {
-      color: #ffffff;
-      word-break: break-all;
-    }
-
-    .refresh-button {
-      margin-top: 15px;
-      padding: 10px 20px;
-      background-color: #2196f3;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-
-    .refresh-button:hover {
-      background-color: #1976d2;
-    }
-
-    .brightness-toggle {
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      width: 50px;
-      height: 50px;
-      min-width: 50px;
-      min-height: 50px;
-      padding: 0;
-      margin: 0;
-      border-radius: 50%;
-      background-color: rgba(33, 150, 243, 0.8);
-      color: white;
-      border: none;
-      font-size: 24px;
-      font-weight: bold;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-      transition: background-color 0.3s, transform 0.2s;
-      z-index: 100;
-    }
-
-    .brightness-toggle:hover {
-      background-color: rgba(25, 118, 210, 1);
-      transform: scale(1.1);
-    }
-
-    .brightness-control {
-      position: fixed;
-      bottom: 80px;
-      left: 20px;
-      background-color: rgba(30, 30, 30, 0.95);
-      padding: 15px 20px;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      inset: 0;
       display: none;
-      flex-direction: column;
-      gap: 10px;
-      z-index: 100;
-      min-width: 240px;
+      place-items: center;
+      padding: 20px;
+      background: rgba(5, 8, 12, .82);
+      backdrop-filter: blur(4px);
     }
-
-    .brightness-control.show {
-      display: flex;
-    }
-
-    .brightness-control label {
-      color: #2196f3;
-      font-weight: bold;
-      font-size: 18px;
-      margin-bottom: 5px;
-    }
-
-    .brightness-slider {
-      width: 100%;
-      height: 40px;
-      -webkit-appearance: none;
-      appearance: none;
-      background: linear-gradient(to right, #222, #2196f3);
-      outline: none;
-      border-radius: 10px;
-      cursor: pointer;
-    }
-
-    .brightness-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 30px;
-      height: 40px;
-      background: #2196f3;
-      cursor: pointer;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    }
-
-    .brightness-slider::-moz-range-thumb {
-      width: 30px;
-      height: 40px;
-      background: #2196f3;
-      cursor: pointer;
-      border-radius: 8px;
-      border: none;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    }
-
-    .brightness-value {
-      color: #ffffff;
-      font-size: 14px;
-      text-align: center;
-    }
-
-    .brightness-settings-btn {
-      background-color: rgba(33, 150, 243, 0.8);
-      color: white;
-      border: none;
-      padding: 1px 4px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 16px;
-      margin-top: 5px;
-      line-height: 1;
-    }
-
-    .brightness-settings-btn:hover {
-      background-color: rgba(25, 118, 210, 1);
-    }
-
-    .schedule-list {
+    .modal.open { display: grid; }
+    .dialog {
+      width: min(780px, 94vw);
+      max-height: 88vh;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      margin: 15px 0;
-      max-height: 300px;
-      overflow-y: auto;
+      overflow: hidden;
+      border: 1px solid #455367;
+      border-radius: 16px;
+      background: #171d25;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, .5);
     }
-
+    .dialog.wide { width: min(930px, 94vw); }
+    .dialog.small { width: min(520px, 92vw); }
+    .dialog-header { min-height: 62px; padding: 0 18px; display: flex; align-items: center; border-bottom: 1px solid var(--border); }
+    .dialog-header h2 { margin: 0; font-size: 20px; }
+    .close-button { margin-left: auto; width: 44px; height: 44px; color: #c7d0da; border: 0; border-radius: 10px; background: transparent; font-size: 27px; }
+    .dialog-body { min-height: 0; padding: 16px 18px; overflow-y: auto; }
+    .dialog-footer { min-height: 70px; padding: 10px 18px; display: flex; align-items: center; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--border); }
+    .schedule-list { display: flex; flex-direction: column; gap: 9px; }
+    .schedule-empty { padding: 35px; color: var(--muted); text-align: center; border: 1px dashed #3b4655; border-radius: 12px; }
     .schedule-item {
-      background-color: #2a2a2a;
-      padding: 8px 10px;
-      border-radius: 5px;
-      display: flex;
-      justify-content: flex-start;
+      padding: 11px;
+      display: grid;
+      grid-template-columns: 145px 1fr 70px 54px;
       align-items: center;
       gap: 12px;
-      flex-wrap: wrap;
+      border: 1px solid #33404f;
+      border-radius: 11px;
+      background: #11171e;
     }
-
-    .schedule-field-group {
-      display: inline-flex;
-      flex-direction: column;
-      gap: 4px;
-      flex: 0 0 auto;
-      width: auto;
-    }
-
-    /* Touch-friendly stepper used for hour, minute, brightness. */
-    .stepper {
-      display: inline-flex;
-      align-items: stretch;
-      border: 1px solid #2196f3;
-      border-radius: 6px;
-      overflow: hidden;
-      background-color: #1e1e1e;
-      user-select: none;
-      width: max-content;
-      flex: 0 0 auto;
-    }
-
-    .stepper-btn {
-      background-color: #2196f3;
-      color: white;
-      border: none;
-      width: 36px;
-      min-width: 36px;
-      min-height: 0;
-      margin: 0;
-      padding: 6px 0;
+    .time-input {
+      width: 145px;
+      height: 48px;
+      padding: 0 10px;
+      color: var(--text);
+      border: 1px solid #465568;
+      border-radius: 9px;
+      background: #202833;
       font-size: 18px;
-      font-weight: bold;
-      line-height: 1;
-      cursor: pointer;
-      touch-action: manipulation;
-      flex: 0 0 auto;
-      box-shadow: none;
-      border-radius: 0;
+      font-weight: 700;
+      color-scheme: dark;
     }
-
-    .stepper-btn:active {
-      background-color: #1976d2;
-    }
-
-    .stepper-value {
-      min-width: 36px;
-      padding: 4px 4px;
-      text-align: center;
-      font-size: 14px;
-      font-weight: bold;
-      color: white;
-      font-variant-numeric: tabular-nums;
-      align-self: center;
-      flex: 0 0 auto;
-    }
-
-    .stepper-separator {
-      color: #2196f3;
-      font-size: 16px;
-      font-weight: bold;
-      align-self: center;
-      padding: 0 2px;
-      flex: 0 0 auto;
-    }
-
-    .schedule-item label {
-      color: #2196f3;
-      font-size: 11px;
-      margin: 0 0 2px;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .schedule-controls {
-      display: flex;
-      gap: 10px;
-    }
-
-    .add-schedule-btn,
-    .save-schedule-btn {
-      background-color: #4caf50;
-      color: white;
-      border: none;
-      padding: 15px 30px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 18px;
-      font-weight: bold;
-    }
-
-    .add-schedule-btn:hover,
-    .save-schedule-btn:hover {
-      background-color: #388e3c;
-    }
-
-    .delete-schedule-btn {
-      background-color: #ff4c4c;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      margin: 0;
-      min-width: 0;
-      min-height: 0;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: bold;
-      box-shadow: none;
-    }
-
-    .delete-schedule-btn:hover {
-      background-color: #ff1a1a;
-    }
-
-    .system-clock {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background-color: rgba(30, 30, 30, 0.9);
-      padding: 15px 20px;
+    .schedule-percent { text-align: right; color: var(--blue); font-size: 17px; font-weight: 800; }
+    .delete-button { width: 48px; height: 48px; border: 1px solid #7a3b3f; border-radius: 9px; color: #ff9fa3; background: #472326; font-size: 22px; }
+    .terminal {
+      height: 390px;
+      padding: 14px;
+      overflow: auto;
+      color: #d7e2ec;
+      background: #090d12;
+      border: 1px solid #2f3946;
       border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-      z-index: 100;
-      font-size: 24px;
-      font-weight: bold;
-      color: #2196f3;
-      font-family: 'Courier New', monospace;
+      font: 12px/1.45 monospace;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .update-state { margin-top: 12px; color: var(--muted); font-size: 14px; font-weight: 700; }
+    .update-state.success { color: var(--green); }
+    .update-state.error { color: var(--red); }
+    .confirm-message { color: #c5ced8; font-size: 16px; line-height: 1.5; }
+    .toast {
+      position: fixed;
+      z-index: 2000;
+      left: 50%;
+      bottom: 20px;
+      max-width: 650px;
+      padding: 13px 18px;
+      color: #fff;
+      border: 1px solid #415064;
+      border-radius: 11px;
+      background: #222b36;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, .35);
+      transform: translate(-50%, 100px);
+      opacity: 0;
+      transition: .18s ease;
+      font-weight: 700;
+    }
+    .toast.show { transform: translate(-50%, 0); opacity: 1; }
+    .toast.error { border-color: #8d4145; background: #4b2629; }
+    .spinner { width: 14px; height: 14px; border: 2px solid #425063; border-top-color: var(--blue); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 950px) {
+      body { overflow: auto; height: auto; }
+      main { height: auto; grid-template-columns: 1fr; }
+      .right-column { grid-template-rows: auto auto; }
     }
   </style>
 </head>
-
 <body>
-  <div class="background">
-    <div class="bg-grid-ceiling"></div>
-    <div class="bg-grid-floor"></div>
-    <div class="bg-grid"></div>
-    <div class="bg-nodes">
-      <span></span><span></span><span></span><span></span>
+  <header>
+    <div class="brand-mark">PI</div>
+    <div>
+      <h1>Display Manager</h1>
+      <div class="subtitle" id="headerSubtitle">Raspberry Pi wall display</div>
     </div>
-    <div class="bg-particles">
-      <i></i><i></i><i></i><i></i><i></i><i></i>
-      <i></i><i></i><i></i><i></i><i></i><i></i>
+    <div class="header-status">
+      <div class="status-pill"><span class="status-dot" id="healthDot"></span><span id="healthText">Checking system</span></div>
+      <div class="status-pill" id="clock">--:--</div>
+      <button class="header-button" id="wifiButton">WiFi</button>
+      <button class="header-button" id="dashboardButton">Home Assistant</button>
     </div>
-    <div class="bg-dog left"></div>
-    <div class="bg-dog right"></div>
-    <div class="bg-noise"></div>
-  </div>
-  <h1>Raspberry Pi Control</h1>
-  <button class="shutdown" onclick="confirmShutdown()">Shut Down</button>
-  <button class="reboot" onclick="confirmReboot()">Reboot</button>
-  <button class="update" onclick="startUpdate()">Update</button>
-  <button class="restart-lightdm" onclick="sendCommand('/restart-lightdm')">Restart LightDM</button>
-  <button class="home-assistant" onclick="goBack()">Back to Home Assistant</button>
+  </header>
 
-  <button class="info-button" onclick="showSystemStats()" title="System Stats">ℹ️</button>
-
-  <button class="brightness-toggle" onclick="toggleBrightnessPanel(event)" title="Display Brightness">☀️</button>
-
-  <div class="brightness-control" id="brightnessControl">
-    <label for="brightnessSlider">Display Brightness</label>
-    <input type="range" id="brightnessSlider" class="brightness-slider" min="0" max="31" value="15"
-      oninput="updateBrightnessDisplay(this.value)" onchange="setBrightness(this.value)">
-    <div class="brightness-value" id="brightnessValue">50%</div>
-    <button class="brightness-settings-btn" onclick="showBrightnessSchedule()">⚙️ Schedule</button>
-  </div>
-
-  <div class="system-clock" id="systemClock">00:00:00</div>
-
-  <div id="updateModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>System Update</h2>
-        <span class="close" onclick="closeUpdateModal()">&times;</span>
+  <main>
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title">System overview</span>
+        <span class="panel-note" id="lastUpdated">Loading…</span>
+        <button class="button ghost" id="refreshStats">Refresh</button>
       </div>
-      <div class="output-container" id="updateOutput"></div>
-      <div id="statusBar" class="status-bar status-running">Update in progress...</div>
+      <div class="overview-body">
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric-label">Temperature</div>
+            <div class="metric-value" id="temperature">--</div>
+            <div class="progress"><span id="temperatureBar"></span></div>
+            <div class="metric-meta" id="temperatureMeta">CPU thermal</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Memory</div>
+            <div class="metric-value" id="memoryPercent">--</div>
+            <div class="progress"><span id="memoryBar"></span></div>
+            <div class="metric-meta" id="memoryDetail">--</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Storage</div>
+            <div class="metric-value" id="diskPercent">--</div>
+            <div class="progress"><span id="diskBar"></span></div>
+            <div class="metric-meta" id="diskDetail">--</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">System load</div>
+            <div class="metric-value" id="systemLoad">--</div>
+            <div class="metric-meta" id="loadDetail">1 minute average</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Uptime</div>
+            <div class="metric-value" id="uptime">--</div>
+            <div class="metric-meta">Since last boot</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">WiFi signal</div>
+            <div class="metric-value" id="wifiSignal">--</div>
+            <div class="metric-meta" id="wifiName">--</div>
+          </div>
+        </div>
+
+        <div class="network-card">
+          <div class="network-title" id="connectionName">Network</div>
+          <div class="network-address" id="ipAddress">--</div>
+          <div class="network-meta" id="networkMeta">Checking connectivity…</div>
+          <div class="signal-bars" id="signalBars">····</div>
+        </div>
+
+        <div class="details-grid">
+          <div class="detail-row"><span class="detail-label">Hardware</span><span class="detail-value" id="hardware">--</span></div>
+          <div class="detail-row"><span class="detail-label">Operating system</span><span class="detail-value" id="osVersion">--</span></div>
+          <div class="detail-row"><span class="detail-label">Traffic today</span><span class="detail-value" id="trafficToday">--</span></div>
+          <div class="detail-row"><span class="detail-label">Last 7 days</span><span class="detail-value" id="trafficWeek">--</span></div>
+          <div class="detail-row"><span class="detail-label">Traffic this month</span><span class="detail-value" id="trafficMonth">--</span></div>
+          <div class="detail-row"><span class="detail-label">Load averages</span><span class="detail-value" id="loadAverages">--</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="right-column">
+      <section class="panel">
+        <div class="panel-header"><span class="panel-title">Display</span><span class="panel-note">Touch Display 2</span></div>
+        <div class="display-body">
+          <div class="brightness-top">
+            <div>
+              <div class="brightness-value" id="brightnessPercent">--%</div>
+              <div class="brightness-device" id="brightnessDevice">Detecting backlight…</div>
+            </div>
+            <span class="panel-note" id="brightnessRaw">-- / --</span>
+          </div>
+          <div class="range-wrap"><span>◐</span><input type="range" id="brightnessSlider" min="0" max="31" value="15"><span>☀</span></div>
+          <div class="schedule-bar">
+            <div class="schedule-summary"><strong>Brightness schedule</strong><span id="scheduleSummary">Loading schedule…</span></div>
+            <button class="button" id="scheduleButton">Manage</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header"><span class="panel-title">Maintenance</span><span class="panel-note">System actions</span></div>
+        <div class="actions-body">
+          <button class="action-button update" id="updateButton"><span class="action-name">System update</span><span class="action-description">Refresh packages and install available upgrades</span></button>
+          <button class="action-button" id="restartDisplayButton"><span class="action-name">Restart display</span><span class="action-description">Relaunch the kiosk session and Chromium</span></button>
+          <button class="action-button reboot" id="rebootButton"><span class="action-name">Reboot Pi</span><span class="action-description">Restart the operating system safely</span></button>
+          <button class="action-button shutdown" id="shutdownButton"><span class="action-name">Shut down</span><span class="action-description">Power off until power is disconnected and restored</span></button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="modal" id="scheduleModal">
+    <div class="dialog">
+      <div class="dialog-header"><h2>Brightness schedule</h2><button class="close-button" data-close="scheduleModal">×</button></div>
+      <div class="dialog-body"><div class="schedule-list" id="scheduleList"></div></div>
+      <div class="dialog-footer">
+        <button class="button ghost" id="addScheduleButton">Add time</button>
+        <button class="button primary" id="saveScheduleButton">Save schedule</button>
+      </div>
     </div>
   </div>
 
-  <div id="statsModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>System Statistics</h2>
-        <span class="close" onclick="closeStatsModal()">&times;</span>
+  <div class="modal" id="updateModal">
+    <div class="dialog wide">
+      <div class="dialog-header"><h2>System update</h2><button class="close-button" data-close="updateModal">×</button></div>
+      <div class="dialog-body">
+        <div class="terminal" id="updateOutput">Preparing update…</div>
+        <div class="update-state" id="updateState">Starting…</div>
       </div>
-      <div id="statsContent" class="stats-grid">
-        <span class="stats-label">Loading...</span>
-        <span class="stats-value"></span>
-      </div>
-      <button class="refresh-button" onclick="loadSystemStats()">Refresh</button>
+      <div class="dialog-footer"><button class="button" data-close="updateModal">Close</button></div>
     </div>
   </div>
 
-  <div id="scheduleModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Brightness Schedule</h2>
-        <span class="close" onclick="closeScheduleModal()">&times;</span>
-      </div>
-      <div id="scheduleList" class="schedule-list"></div>
-      <div class="schedule-controls">
-        <button class="add-schedule-btn" onclick="addScheduleItem()">+ Add Schedule</button>
-        <button class="save-schedule-btn" onclick="saveSchedule()">Save</button>
+  <div class="modal" id="confirmModal">
+    <div class="dialog small">
+      <div class="dialog-header"><h2 id="confirmTitle">Confirm action</h2><button class="close-button" data-close="confirmModal">×</button></div>
+      <div class="dialog-body"><div class="confirm-message" id="confirmMessage"></div></div>
+      <div class="dialog-footer">
+        <button class="button ghost" data-close="confirmModal">Cancel</button>
+        <button class="button danger" id="confirmButton">Confirm</button>
       </div>
     </div>
   </div>
+
+  <div class="toast" id="toast"></div>
 
   <script>
-    let eventSource = null;
+    const state = {
+      dashboardUrl: 'http://192.168.1.216:8123',
+      brightness: { brightness: 15, maxBrightness: 31, percentage: 48 },
+      schedules: [],
+      updateSource: null,
+      confirmAction: null,
+      toastTimer: null,
+      statsLoading: false
+    };
 
-    function sendCommand(endpoint) {
-      fetch(endpoint)
-        .then(response => response.text())
-        .then(data => alert(data))
-        .catch(error => console.error('Error:', error));
+    const byId = (id) => document.getElementById(id);
+
+    async function requestJson(url, options = {}) {
+      const response = await fetch(url, { cache: 'no-store', ...options });
+      const contentType = response.headers.get('content-type') || '';
+      const body = contentType.includes('application/json') ? await response.json() : { message: await response.text() };
+      if (!response.ok) throw new Error(body.error || body.message || `Request failed (${response.status})`);
+      return body;
     }
 
-    function confirmShutdown() {
-      if (confirm('Are you sure you want to shut down the Raspberry Pi?')) {
-        sendCommand('/shutdown');
+    function showToast(message, error = false) {
+      const toast = byId('toast');
+      clearTimeout(state.toastTimer);
+      toast.textContent = message;
+      toast.className = `toast show${error ? ' error' : ''}`;
+      state.toastTimer = setTimeout(() => { toast.className = 'toast'; }, 3200);
+    }
+
+    function openModal(id) { byId(id).classList.add('open'); }
+    function closeModal(id) { byId(id).classList.remove('open'); }
+
+    function updateClock() {
+      byId('clock').textContent = new Intl.DateTimeFormat([], { hour: 'numeric', minute: '2-digit' }).format(new Date());
+    }
+
+    function signalGlyph(signal) {
+      if (signal >= 75) return '▂▄▆█';
+      if (signal >= 50) return '▂▄▆·';
+      if (signal >= 25) return '▂▄··';
+      return '▂···';
+    }
+
+    function setProgress(id, value, warningAt = 75, dangerAt = 90) {
+      const bar = byId(id);
+      const bounded = Math.max(0, Math.min(100, Number(value) || 0));
+      bar.style.width = `${bounded}%`;
+      bar.className = bounded >= dangerAt ? 'danger' : bounded >= warningAt ? 'warn' : '';
+    }
+
+    async function loadConfig() {
+      try {
+        const config = await requestJson('/api/config');
+        state.dashboardUrl = config.homeAssistantUrl || state.dashboardUrl;
+      } catch (error) {
+        // The built-in fallback remains usable.
       }
     }
 
-    function confirmReboot() {
-      if (confirm('Are you sure you want to reboot the Raspberry Pi?')) {
-        sendCommand('/reboot');
+    async function loadStats() {
+      if (state.statsLoading) return;
+      state.statsLoading = true;
+      byId('lastUpdated').textContent = 'Refreshing…';
+      try {
+        const stats = await requestJson('/system-stats');
+        byId('temperature').textContent = stats.temperature;
+        byId('temperatureMeta').textContent = stats.temperatureC >= 75 ? 'Running warm' : 'CPU thermal';
+        setProgress('temperatureBar', stats.temperatureC / 85 * 100, 78, 90);
+        byId('memoryPercent').textContent = `${stats.memoryPercent}%`;
+        byId('memoryDetail').textContent = stats.memory;
+        setProgress('memoryBar', stats.memoryPercent);
+        byId('diskPercent').textContent = `${stats.diskRoot}%`;
+        byId('diskDetail').textContent = stats.diskSpace;
+        setProgress('diskBar', stats.diskRoot, 75, 90);
+        byId('systemLoad').textContent = stats.loadOne.toFixed(2);
+        byId('loadDetail').textContent = `${stats.cpuCores} CPU cores`;
+        byId('uptime').textContent = stats.uptime;
+        byId('wifiSignal').textContent = stats.wifiSignal === 'N/A' ? 'N/A' : `${stats.wifiSignal}%`;
+        byId('wifiName').textContent = stats.wifiConnection;
+        byId('connectionName').textContent = stats.wifiConnection === 'Disconnected' ? 'Network connection' : stats.wifiConnection;
+        byId('ipAddress').textContent = stats.ipAddress;
+        byId('networkMeta').textContent = stats.ipAddresses.map((item) => `${item.name} ${item.address}`).join(' · ') || 'No IPv4 address';
+        byId('signalBars').textContent = signalGlyph(Number(stats.wifiSignal) || 0);
+        byId('hardware').textContent = stats.hardwareModel;
+        byId('osVersion').textContent = stats.osVersion;
+        byId('trafficToday').textContent = stats.vnstatToday;
+        byId('trafficWeek').textContent = stats.vnstatWeek;
+        byId('trafficMonth').textContent = stats.vnstatMonth;
+        byId('loadAverages').textContent = stats.loadAverage;
+        byId('headerSubtitle').textContent = `${stats.hardwareModel} · ${stats.ipAddress}`;
+        byId('healthDot').className = 'status-dot good';
+        byId('healthText').textContent = 'System online';
+        byId('lastUpdated').textContent = `Updated ${new Intl.DateTimeFormat([], { hour: 'numeric', minute: '2-digit' }).format(new Date())}`;
+      } catch (error) {
+        byId('healthDot').className = 'status-dot';
+        byId('healthText').textContent = 'Status unavailable';
+        byId('lastUpdated').textContent = 'Refresh failed';
+        showToast(error.message, true);
+      } finally {
+        state.statsLoading = false;
       }
     }
 
-    function startUpdate() {
-      // Show modal
-      document.getElementById('updateModal').style.display = 'block';
-      document.getElementById('updateOutput').textContent = '';
-      document.getElementById('statusBar').className = 'status-bar status-running';
-      document.getElementById('statusBar').textContent = 'Update in progress...';
-
-      // Start the update
-      fetch('/update')
-        .then(response => response.text())
-        .then(data => {
-          console.log(data);
-          // Connect to SSE for live updates
-          connectToUpdateStream();
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          document.getElementById('statusBar').className = 'status-bar status-error';
-          document.getElementById('statusBar').textContent = 'Error starting update';
-        });
+    function renderBrightness() {
+      const value = state.brightness;
+      byId('brightnessSlider').max = value.maxBrightness;
+      byId('brightnessSlider').value = value.brightness;
+      byId('brightnessPercent').textContent = `${value.percentage}%`;
+      byId('brightnessRaw').textContent = `${value.brightness} / ${value.maxBrightness}`;
+      byId('brightnessDevice').textContent = value.device ? `Backlight: ${value.device}` : 'Display backlight';
     }
 
-    function connectToUpdateStream() {
-      if (eventSource) {
-        eventSource.close();
+    async function loadBrightness() {
+      try {
+        state.brightness = await requestJson('/brightness');
+        renderBrightness();
+      } catch (error) {
+        byId('brightnessDevice').textContent = 'Backlight unavailable';
+        showToast(error.message, true);
       }
-
-      eventSource = new EventSource('/update-status');
-      const outputDiv = document.getElementById('updateOutput');
-      const statusBar = document.getElementById('statusBar');
-
-      // Terminal-style buffer: track committed lines and current in-progress line
-      // so that '\r' (carriage return) overwrites the current line, like a real terminal.
-      let committed = '';
-      let currentLine = '';
-      const renderOutput = () => {
-        outputDiv.textContent = committed + currentLine;
-        outputDiv.scrollTop = outputDiv.scrollHeight;
-      };
-      const appendChunk = (chunk) => {
-        // Normalize CRLF so we don't double-handle.
-        const text = chunk.replace(/\r\n/g, '\n');
-        for (let i = 0; i < text.length; i++) {
-          const ch = text[i];
-          if (ch === '\n') {
-            committed += currentLine + '\n';
-            currentLine = '';
-          } else if (ch === '\r') {
-            // Reset the current line so the next chars overwrite it.
-            currentLine = '';
-          } else {
-            currentLine += ch;
-          }
-        }
-      };
-
-      eventSource.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        appendChunk(data.message);
-        renderOutput();
-
-        if (data.done) {
-          eventSource.close();
-          if (data.success) {
-            statusBar.className = 'status-bar status-success';
-            statusBar.textContent = 'Update completed successfully! You might want to reboot soon.';
-          } else {
-            statusBar.className = 'status-bar status-error';
-            statusBar.textContent = 'Update failed. Check the output above for details.';
-          }
-        }
-      };
-
-      eventSource.onerror = (error) => {
-        console.error('EventSource error:', error);
-        eventSource.close();
-        statusBar.className = 'status-bar status-error';
-        statusBar.textContent = 'Connection error. Update may still be running.';
-      };
     }
 
-    function closeUpdateModal() {
-      if (eventSource) {
-        eventSource.close();
-        eventSource = null;
+    function previewBrightness(raw) {
+      const brightness = Number(raw);
+      state.brightness.brightness = brightness;
+      state.brightness.percentage = Math.round(brightness / state.brightness.maxBrightness * 100);
+      renderBrightness();
+    }
+
+    async function saveBrightness(raw) {
+      try {
+        state.brightness = await requestJson(`/brightness/${Number(raw)}`, { method: 'POST' });
+        renderBrightness();
+      } catch (error) {
+        showToast(error.message, true);
+        loadBrightness();
       }
-      document.getElementById('updateModal').style.display = 'none';
     }
 
-    function goBack() {
-      window.location.href = 'http://192.168.1.216:8123';
+    function formatTime(schedule) {
+      return `${String(schedule.hour).padStart(2, '0')}:${String(schedule.minute).padStart(2, '0')}`;
     }
 
-    function updateBrightnessDisplay(value) {
-      const percentage = Math.round((value / 31) * 100);
-      document.getElementById('brightnessValue').textContent = percentage + '%';
+    function schedulePercent(schedule) {
+      return Math.round(schedule.brightness / state.brightness.maxBrightness * 100);
     }
 
-    function setBrightness(value) {
-      fetch(`/brightness/${value}`, { method: 'POST' })
-        .then(response => response.text())
-        .then(data => {
-          console.log(data);
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          alert('Failed to set brightness');
-        });
-    }
-
-    function loadCurrentBrightness() {
-      fetch('/brightness')
-        .then(response => response.json())
-        .then(data => {
-          const slider = document.getElementById('brightnessSlider');
-          slider.value = data.brightness;
-          updateBrightnessDisplay(data.brightness);
-        })
-        .catch(error => {
-          console.error('Error loading brightness:', error);
-        });
-    }
-
-    // Load current brightness on page load
-    window.addEventListener('DOMContentLoaded', loadCurrentBrightness);
-
-    function toggleBrightnessPanel(event) {
-      if (event) event.stopPropagation();
-      document.getElementById('brightnessControl').classList.toggle('show');
-    }
-
-    // Click outside the panel to close it.
-    document.addEventListener('click', (e) => {
-      const panel = document.getElementById('brightnessControl');
-      if (!panel.classList.contains('show')) return;
-      if (panel.contains(e.target)) return;
-      if (e.target.closest('.brightness-toggle')) return;
-      panel.classList.remove('show');
-    });
-
-    function updateSystemClock() {
+    function updateScheduleSummary() {
+      if (!state.schedules.length) {
+        byId('scheduleSummary').textContent = 'No automatic changes configured';
+        return;
+      }
       const now = new Date();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const seconds = String(now.getSeconds()).padStart(2, '0');
-      document.getElementById('systemClock').textContent = `${hours}:${minutes}:${seconds}`;
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      const ordered = [...state.schedules].sort((a, b) => (a.hour * 60 + a.minute) - (b.hour * 60 + b.minute));
+      const next = ordered.find((item) => item.hour * 60 + item.minute > nowMinutes) || ordered[0];
+      byId('scheduleSummary').textContent = `${state.schedules.length} change${state.schedules.length === 1 ? '' : 's'} · Next ${formatTime(next)} at ${schedulePercent(next)}%`;
     }
 
-    // Update clock immediately and then every second
-    updateSystemClock();
-    setInterval(updateSystemClock, 1000);
-
-    function showSystemStats() {
-      document.getElementById('statsModal').style.display = 'block';
-      loadSystemStats();
+    async function loadSchedules() {
+      try {
+        const data = await requestJson('/brightness-schedule');
+        state.schedules = data.schedules;
+        updateScheduleSummary();
+        renderSchedules();
+      } catch (error) {
+        showToast(error.message, true);
+      }
     }
 
-    function closeStatsModal() {
-      document.getElementById('statsModal').style.display = 'none';
-    }
-
-    function loadSystemStats() {
-      const statsContent = document.getElementById('statsContent');
-      statsContent.innerHTML = '<span class="stats-label">Loading...</span><span class="stats-value"></span>';
-
-      fetch('/system-stats')
-        .then(response => response.json())
-        .then(stats => {
-          let html = '';
-
-          html += '<span class="stats-label">Hardware:</span>';
-          html += `<span class="stats-value">${stats.hardwareModel}</span>`;
-
-          html += '<span class="stats-label">Uptime:</span>';
-          html += `<span class="stats-value">${stats.uptime}</span>`;
-
-          html += '<span class="stats-label">Load Average:</span>';
-          html += `<span class="stats-value">${stats.loadAverage}</span>`;
-
-          html += '<span class="stats-label">OS Version:</span>';
-          html += `<span class="stats-value">${stats.osVersion}</span>`;
-
-          html += '<span class="stats-label">IP Address:</span>';
-          html += `<span class="stats-value">${stats.ipAddress}</span>`;
-
-          html += '<span class="stats-label">WiFi Signal:</span>';
-          html += `<span class="stats-value">${stats.wifiSignal}${stats.wifiSignal !== 'N/A' ? ' dBm' : ''}</span>`;
-
-          html += '<span class="stats-label">Temperature:</span>';
-          html += `<span class="stats-value">${stats.temperature}</span>`;
-
-          html += '<span class="stats-label">Disk Space:</span>';
-          html += `<span class="stats-value">${stats.diskSpace}</span>`;
-
-          html += '<span class="stats-label">Memory:</span>';
-          html += `<span class="stats-value">${stats.memory}</span>`;
-
-          if (stats.vnstatToday !== 'N/A') {
-            html += '<span class="stats-label">Network (Today):</span>';
-            html += `<span class="stats-value">${stats.vnstatToday}</span>`;
-          }
-
-          if (stats.vnstatWeek !== 'N/A') {
-            html += '<span class="stats-label">Network (Week):</span>';
-            html += `<span class="stats-value">${stats.vnstatWeek}</span>`;
-          }
-
-          if (stats.vnstatMonth !== 'N/A') {
-            html += '<span class="stats-label">Network (Month):</span>';
-            html += `<span class="stats-value">${stats.vnstatMonth}</span>`;
-          }
-
-          statsContent.innerHTML = html;
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          statsContent.innerHTML = '<span class="stats-label">Error:</span><span class="stats-value">Failed to load stats</span>';
-        });
-    }
-
-    function showBrightnessSchedule() {
-      document.getElementById('scheduleModal').style.display = 'block';
-      loadBrightnessSchedule();
-    }
-
-    function closeScheduleModal() {
-      document.getElementById('scheduleModal').style.display = 'none';
-    }
-
-    function loadBrightnessSchedule() {
-      fetch('/brightness-schedule')
-        .then(response => response.json())
-        .then(data => {
-          renderScheduleList(data.schedules);
-        })
-        .catch(error => {
-          console.error('Error loading schedule:', error);
-        });
-    }
-
-    function renderScheduleList(schedules) {
-      const scheduleList = document.getElementById('scheduleList');
-
-      if (schedules.length === 0) {
-        scheduleList.innerHTML = '<div style="color: #aaa; text-align: center; padding: 20px;">No schedules configured</div>';
+    function renderSchedules() {
+      const list = byId('scheduleList');
+      list.replaceChildren();
+      if (!state.schedules.length) {
+        const empty = document.createElement('div');
+        empty.className = 'schedule-empty';
+        empty.textContent = 'No scheduled brightness changes. Add a time to create one.';
+        list.append(empty);
         return;
       }
 
-      scheduleList.innerHTML = schedules.map((schedule, index) => {
-        const hourNum = parseInt(schedule.hour, 10) || 0;
-        const minuteNum = parseInt(schedule.minute, 10) || 0;
-        const percent = rawToPercent(schedule.brightness);
-        return `
-        <div class="schedule-item" data-index="${index}">
-          <div class="schedule-field-group">
-            <label>Time</label>
-            <div style="display:flex;align-items:center;gap:6px;">
-              <div class="stepper">
-                <button class="stepper-btn" onclick="adjustScheduleHour(${index}, -1)">−</button>
-                <div class="stepper-value">${String(hourNum).padStart(2, '0')}</div>
-                <button class="stepper-btn" onclick="adjustScheduleHour(${index}, 1)">+</button>
-              </div>
-              <span class="stepper-separator">:</span>
-              <div class="stepper">
-                <button class="stepper-btn" onclick="adjustScheduleMinute(${index}, -5)">−</button>
-                <div class="stepper-value">${String(minuteNum).padStart(2, '0')}</div>
-                <button class="stepper-btn" onclick="adjustScheduleMinute(${index}, 5)">+</button>
-              </div>
-            </div>
-          </div>
-          <div class="schedule-field-group">
-            <label>Brightness</label>
-            <div class="stepper">
-              <button class="stepper-btn" onclick="adjustScheduleBrightness(${index}, -1)">−</button>
-              <div class="stepper-value">${percent}%</div>
-              <button class="stepper-btn" onclick="adjustScheduleBrightness(${index}, 1)">+</button>
-            </div>
-          </div>
-          <button class="delete-schedule-btn" onclick="deleteScheduleItem(${index})">Delete</button>
-        </div>
-      `;
-      }).join('');
+      state.schedules.forEach((schedule, index) => {
+        const row = document.createElement('div');
+        row.className = 'schedule-item';
+        const time = document.createElement('input');
+        time.className = 'time-input';
+        time.type = 'time';
+        time.step = '300';
+        time.value = formatTime(schedule);
+        time.addEventListener('change', () => {
+          const [hour, minute] = time.value.split(':').map(Number);
+          schedule.hour = hour;
+          schedule.minute = minute;
+        });
+        const range = document.createElement('input');
+        range.type = 'range';
+        range.min = '0';
+        range.max = String(state.brightness.maxBrightness);
+        range.value = String(schedule.brightness);
+        const percent = document.createElement('div');
+        percent.className = 'schedule-percent';
+        percent.textContent = `${schedulePercent(schedule)}%`;
+        range.addEventListener('input', () => {
+          schedule.brightness = Number(range.value);
+          percent.textContent = `${schedulePercent(schedule)}%`;
+        });
+        const remove = document.createElement('button');
+        remove.className = 'delete-button';
+        remove.textContent = '×';
+        remove.setAttribute('aria-label', 'Delete schedule');
+        remove.addEventListener('click', () => {
+          state.schedules.splice(index, 1);
+          renderSchedules();
+        });
+        row.append(time, range, percent, remove);
+        list.append(row);
+      });
     }
 
-    // Hardware backlight is 0-31; UI shows 0-100%.
-    function rawToPercent(raw) {
-      const r = Math.max(0, Math.min(31, parseInt(raw, 10) || 0));
-      return Math.round((r / 31) * 100);
-    }
-    function percentToRaw(percent) {
-      const p = Math.max(0, Math.min(100, parseInt(percent, 10) || 0));
-      return Math.round((p / 100) * 31);
-    }
-
-    let currentSchedules = [];
-
-    function adjustScheduleHour(index, delta) {
-      if (!currentSchedules[index]) return;
-      const cur = parseInt(currentSchedules[index].hour, 10) || 0;
-      const next = ((cur + delta) % 24 + 24) % 24;
-      currentSchedules[index].hour = String(next);
-      renderScheduleList(currentSchedules);
+    function addSchedule() {
+      const now = new Date();
+      state.schedules.push({
+        hour: (now.getHours() + 1) % 24,
+        minute: Math.floor(now.getMinutes() / 5) * 5,
+        brightness: state.brightness.brightness
+      });
+      renderSchedules();
+      byId('scheduleList').lastElementChild?.scrollIntoView({ block: 'nearest' });
     }
 
-    function adjustScheduleMinute(index, delta) {
-      if (!currentSchedules[index]) return;
-      const cur = parseInt(currentSchedules[index].minute, 10) || 0;
-      // Snap to the nearest multiple of |delta| so repeated taps stay on-grid.
-      const step = Math.abs(delta) || 1;
-      const snapped = Math.round(cur / step) * step;
-      const next = ((snapped + delta) % 60 + 60) % 60;
-      currentSchedules[index].minute = String(next);
-      renderScheduleList(currentSchedules);
+    async function saveSchedules() {
+      const button = byId('saveScheduleButton');
+      button.disabled = true;
+      try {
+        const data = await requestJson('/brightness-schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ schedules: state.schedules })
+        });
+        state.schedules = data.schedules;
+        updateScheduleSummary();
+        closeModal('scheduleModal');
+        showToast(data.message);
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        button.disabled = false;
+      }
     }
 
-    function adjustScheduleBrightness(index, delta) {
-      if (!currentSchedules[index]) return;
-      const cur = parseInt(currentSchedules[index].brightness, 10) || 0;
-      const next = Math.max(0, Math.min(31, cur + delta));
-      currentSchedules[index].brightness = String(next);
-      renderScheduleList(currentSchedules);
-    }
-
-    function deleteScheduleItem(index) {
-      currentSchedules.splice(index, 1);
-      renderScheduleList(currentSchedules);
-    }
-
-    function addScheduleItem() {
-      const newSchedule = {
-        hour: '12',
-        minute: '00',
-        brightness: '15' // raw 0-31 (~50%)
+    function connectUpdateStream() {
+      state.updateSource?.close();
+      const output = byId('updateOutput');
+      const status = byId('updateState');
+      let committed = '';
+      let currentLine = '';
+      const append = (chunk) => {
+        const text = chunk.replace(/\r\n/g, '\n');
+        for (const character of text) {
+          if (character === '\n') { committed += `${currentLine}\n`; currentLine = ''; }
+          else if (character === '\r') currentLine = '';
+          else currentLine += character;
+        }
+        output.textContent = committed + currentLine;
+        output.scrollTop = output.scrollHeight;
       };
-      currentSchedules.push(newSchedule);
-      renderScheduleList(currentSchedules);
+      state.updateSource = new EventSource('/update-status');
+      state.updateSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        append(data.message);
+        if (data.done) {
+          status.className = `update-state ${data.success ? 'success' : 'error'}`;
+          status.textContent = data.success ? 'Update completed successfully' : 'Update failed — review the output above';
+          state.updateSource.close();
+          state.updateSource = null;
+          loadStats();
+        }
+      };
+      state.updateSource.onerror = () => {
+        if (!state.updateSource) return;
+        status.className = 'update-state error';
+        status.textContent = 'Lost the update output connection';
+        state.updateSource.close();
+        state.updateSource = null;
+      };
     }
 
-    function saveSchedule() {
-      // currentSchedules is the source of truth (steppers update it directly),
-      // so just send it as-is. Brightness is stored as raw 0-31, matching the API.
-      const schedules = currentSchedules.map(s => ({
-        hour: String(s.hour),
-        minute: String(s.minute),
-        brightness: String(s.brightness)
-      }));
-
-      fetch('/brightness-schedule', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schedules })
-      })
-        .then(response => response.text())
-        .then(data => {
-          alert('Schedule saved successfully!');
-          currentSchedules = schedules;
-        })
-        .catch(error => {
-          console.error('Error saving schedule:', error);
-          alert('Failed to save schedule');
-        });
-    }
-
-    // Load schedule data when opening modal
-    function loadBrightnessSchedule() {
-      fetch('/brightness-schedule')
-        .then(response => response.json())
-        .then(data => {
-          currentSchedules = data.schedules;
-          renderScheduleList(currentSchedules);
-        })
-        .catch(error => {
-          console.error('Error loading schedule:', error);
-        });
-    }
-
-    // Close modal when clicking outside of it
-    window.onclick = function (event) {
-      const updateModal = document.getElementById('updateModal');
-      const statsModal = document.getElementById('statsModal');
-      const scheduleModal = document.getElementById('scheduleModal');
-      if (event.target === updateModal) {
-        closeUpdateModal();
-      }
-      if (event.target === statsModal) {
-        closeStatsModal();
-      }
-      if (event.target === scheduleModal) {
-        closeScheduleModal();
+    async function startUpdate() {
+      openModal('updateModal');
+      byId('updateOutput').textContent = 'Starting system update…\n';
+      byId('updateState').className = 'update-state';
+      byId('updateState').textContent = 'Update in progress';
+      try {
+        await requestJson('/update', { method: 'POST' });
+        connectUpdateStream();
+      } catch (error) {
+        if (error.message.includes('already running')) connectUpdateStream();
+        else {
+          byId('updateState').className = 'update-state error';
+          byId('updateState').textContent = error.message;
+        }
       }
     }
+
+    function askForConfirmation({ title, message, label, endpoint, danger = true }) {
+      byId('confirmTitle').textContent = title;
+      byId('confirmMessage').textContent = message;
+      byId('confirmButton').textContent = label;
+      byId('confirmButton').className = `button ${danger ? 'danger' : 'primary'}`;
+      state.confirmAction = { endpoint, label };
+      openModal('confirmModal');
+    }
+
+    async function runConfirmedAction() {
+      const action = state.confirmAction;
+      if (!action) return;
+      byId('confirmButton').disabled = true;
+      try {
+        const result = await requestJson(action.endpoint, { method: 'POST' });
+        closeModal('confirmModal');
+        showToast(result.message || `${action.label} requested`);
+      } catch (error) {
+        showToast(error.message, true);
+      } finally {
+        byId('confirmButton').disabled = false;
+        state.confirmAction = null;
+      }
+    }
+
+    document.querySelectorAll('[data-close]').forEach((button) => button.addEventListener('click', () => closeModal(button.dataset.close)));
+    document.querySelectorAll('.modal').forEach((modal) => modal.addEventListener('click', (event) => { if (event.target === modal) closeModal(modal.id); }));
+    byId('wifiButton').addEventListener('click', () => { window.location.href = '/wifi'; });
+    byId('dashboardButton').addEventListener('click', () => { window.location.href = state.dashboardUrl; });
+    byId('refreshStats').addEventListener('click', loadStats);
+    byId('brightnessSlider').addEventListener('input', (event) => previewBrightness(event.target.value));
+    byId('brightnessSlider').addEventListener('change', (event) => saveBrightness(event.target.value));
+    byId('scheduleButton').addEventListener('click', async () => { await loadSchedules(); openModal('scheduleModal'); });
+    byId('addScheduleButton').addEventListener('click', addSchedule);
+    byId('saveScheduleButton').addEventListener('click', saveSchedules);
+    byId('updateButton').addEventListener('click', startUpdate);
+    byId('restartDisplayButton').addEventListener('click', () => askForConfirmation({
+      title: 'Restart display?', message: 'The screen will briefly go black while the kiosk session restarts.', label: 'Restart display', endpoint: '/restart-lightdm', danger: false
+    }));
+    byId('rebootButton').addEventListener('click', () => askForConfirmation({
+      title: 'Reboot Raspberry Pi?', message: 'Home Assistant controls on this display will be unavailable for about a minute.', label: 'Reboot', endpoint: '/reboot'
+    }));
+    byId('shutdownButton').addEventListener('click', () => askForConfirmation({
+      title: 'Shut down Raspberry Pi?', message: 'The display will remain off until power is disconnected and restored.', label: 'Shut down', endpoint: '/shutdown'
+    }));
+    byId('confirmButton').addEventListener('click', runConfirmedAction);
+
+    async function initialize() {
+      await Promise.all([loadConfig(), loadStats(), loadBrightness()]);
+      await loadSchedules();
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+    initialize();
+    setInterval(loadStats, 30000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) { loadStats(); loadBrightness(); } });
   </script>
 </body>
-
 </html>
