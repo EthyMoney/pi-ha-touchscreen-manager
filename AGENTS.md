@@ -19,6 +19,8 @@ main.js              # Express server, all API routes
 process.json         # PM2 app config (script path, env)
 package.json         # Deps: express, pm2
 public/index.html    # Single-page touch UI
+public/wifi.html     # Offline WiFi recovery UI
+kiosk-extension/    # Chromium navigation/connectivity recovery extension
 README.md            # User-facing setup instructions
 ```
 
@@ -51,6 +53,7 @@ display ALL=(ALL) NOPASSWD: /usr/sbin/shutdown *, /usr/sbin/shutdown
 display ALL=(ALL) NOPASSWD: /usr/sbin/reboot
 display ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart lightdm, /usr/bin/systemctl restart lightdm.service
 display ALL=(ALL) NOPASSWD: /usr/bin/tee /sys/class/backlight/*/brightness
+display ALL=(root) NOPASSWD: /usr/bin/nmcli *
 ```
 
 Note also `/etc/sudoers.d/display-user` exists with overlapping (older) rules. Sudoers is the **union** of all matching rules across all files in `/etc/sudoers.d/`, so leftover rules in either file can mask the intended ones. When fixing sudoers issues, audit **both** files.
@@ -61,18 +64,25 @@ In `main.js`, all sudo invocations use the `-n` (non-interactive) flag so that a
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/shutdown` | `sudo -n shutdown now` |
-| GET | `/reboot` | `sudo -n reboot` |
-| GET | `/update` | Spawns `sudo -n apt-get update && sudo -n apt-get upgrade -y`, streams output |
+| POST/GET | `/shutdown` | Schedules `sudo -n shutdown now` after sending the response |
+| POST/GET | `/reboot` | Schedules `sudo -n reboot` after sending the response |
+| POST/GET | `/update` | Runs `apt-get update` then `apt-get upgrade -y`, streaming output |
 | GET | `/update-status` | SSE stream of update output (replays buffered output to late subscribers) |
-| GET | `/restart-lightdm` | `sudo -n systemctl restart lightdm` |
-| GET | `/brightness` | Reads `/sys/class/backlight/10-0045/brightness` |
-| POST | `/brightness/:level` | Writes 0–31 to backlight via `sudo -n tee` |
+| POST/GET | `/restart-lightdm` | Schedules `sudo -n systemctl restart lightdm` after sending the response |
+| GET | `/brightness` | Detects and reads the active kernel backlight |
+| POST | `/brightness/:level` | Writes within the detected hardware range via `sudo -n tee` |
 | GET | `/brightness-schedule` | Parses display user's crontab for `# brightness-schedule` lines |
 | POST | `/brightness-schedule` | Rewrites those crontab entries |
 | GET | `/system-stats` | Runs many shell commands in parallel, returns JSON |
+| GET | `/wifi` | Local touch-friendly WiFi recovery page |
+| GET | `/kiosk` | Local startup bootstrap that checks Home Assistant before navigating |
+| GET | `/api/wifi/status` | Current WiFi and Ethernet state from NetworkManager |
+| GET | `/api/wifi/networks` | Scan and list nearby WiFi networks |
+| POST | `/api/wifi/connect` | Connect `wlan0` to an open or WPA personal network |
+| GET | `/api/config` | Return the configured Home Assistant URL to local pages |
+| GET | `/api/dashboard/status` | Check whether the configured Home Assistant URL is reachable |
 
-Brightness path is hardcoded to `/sys/class/backlight/10-0045/brightness` — adjust if the hardware changes. Range is 0–31 (not 0–100, despite the slider's percentage UI).
+Brightness device names are detected under `/sys/class/backlight`. Schedule cron lines intentionally use `/sys/class/backlight/*/brightness`, while API responses include the detected raw hardware range and a calculated percentage.
 
 ## Conventions
 
@@ -135,12 +145,12 @@ You're running it as the wrong user. Use `sudo su - display -c "pm2 list"`.
 
 ### Brightness slider does nothing
 
-- Confirm the backlight path: `ls /sys/class/backlight/`. If not `10-0045`, update the hardcoded path in `main.js` (search for `backlight/10-0045`).
-- Confirm sudoers allows `tee` to that path: `sudo -u display sudo -n bash -c 'echo 15 | sudo -n tee /sys/class/backlight/10-0045/brightness'`.
+- Confirm a backlight is exposed: `ls /sys/class/backlight/`.
+- Confirm sudoers allows the device-independent path: `sudo -u display sh -c 'cat /sys/class/backlight/*/brightness | head -1 | sudo -n tee /sys/class/backlight/*/brightness'`.
 
 ### Stats endpoint shows `N/A` everywhere
 
-`/system-stats` depends on `vnstat`, `iwconfig` (wireless-tools), `vcgencmd`, and `jq`. Install missing packages or accept `N/A` for unavailable ones — the code already falls back gracefully per-field.
+`/system-stats` uses built-in Node/Linux sources plus `nmcli`, `df`, and optional `vnstat`. Missing optional traffic data falls back to `N/A`.
 
 ## Don'ts
 
