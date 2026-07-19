@@ -264,7 +264,7 @@ Cron owns execution of scheduled changes, so schedules persist independently of 
 | `kiosk-extension/` | Chromium navigation-error and stale-dashboard recovery |
 | `/etc/sudoers.d/display-pi-ha` | Non-interactive privilege allowlist |
 | `/home/display/sudoers-setup.sh` | Reinstalls the expected sudoers rules |
-| `/home/logan/system_installer/pi4-homeassistant-kiosk-setup.sh` | Rebuild source for the wider Pi kiosk configuration |
+| `/home/<user>/system_installer/pi4-homeassistant-kiosk-setup.sh` | Rebuild source for the wider Pi kiosk configuration (external to this repo; machine-specific path) |
 
 ## Operational checks
 
