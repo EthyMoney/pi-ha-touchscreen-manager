@@ -34,6 +34,7 @@ See [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) for the deployed Pi's boot 
 - Redirects failed Home Assistant navigations to a local recovery page that works offline
 - Checks dashboard reachability every 30 seconds, including when a loaded dashboard becomes stale; two failed checks are required before proactive recovery
 - While the recovery page is open, automatically returns to Home Assistant after it remains reachable for 15 seconds
+- Reloads the dashboard when custom cards fail to load (for example after a Home Assistant restart), with backoff so a real card configuration error cannot cause a reload loop
 - Scans nearby networks and connects through NetworkManager
 - Includes an on-screen keyboard for password entry
 - Checks Home Assistant reachability and returns to the dashboard after recovery

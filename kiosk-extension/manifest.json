@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Pi Kiosk Network Recovery",
-  "version": "1.1.0",
-  "description": "Redirects failed Home Assistant navigations to the Pi's local WiFi recovery page.",
-  "permissions": ["alarms", "storage", "tabs", "webNavigation"],
+  "version": "1.2.0",
+  "description": "Redirects failed Home Assistant navigations to the Pi's local WiFi recovery page and reloads dashboards whose cards failed to load.",
+  "permissions": ["alarms", "scripting", "storage", "tabs", "webNavigation"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "service-worker.js"

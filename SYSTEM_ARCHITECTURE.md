@@ -208,11 +208,12 @@ The trade-off is that X11 does not provide the same compositor-wide frame-presen
 
 NetworkManager owns both Ethernet and WiFi. The local manager calls `/usr/bin/nmcli` to read state, scan networks, and connect `wlan0`.
 
-Recovery happens at three layers:
+Recovery happens at four layers:
 
 1. **Cold boot:** `/kiosk` checks Home Assistant before leaving localhost.
 2. **Navigation failure:** the Chromium extension listens for recoverable top-level network errors and immediately opens `/wifi?reason=network-error`.
 3. **Stale loaded dashboard:** the extension checks `/api/dashboard/status` every 30 seconds. Two consecutive failures are required before it leaves a loaded remote page, preventing a transient timeout from causing unnecessary recovery.
+4. **Custom cards failed to load:** on the same 30-second check, while Home Assistant is reachable, the extension counts `hui-error-card` elements (and the badge/heading variants) across the dashboard's shadow roots. Two consecutive checks with errors reload the page with the cache bypassed. After a Home Assistant restart the page can reload before HACS has registered `/hacsfiles/`, so custom card modules 404 and every custom card shows "Configuration error" until the next reload. Repeated reloads back off to 2, 5, 15, then 30 minutes apart so a genuine card configuration error cannot cause a reload loop; the counters reset once the page loads cleanly.
 
 The WiFi page is served locally and therefore remains available without LAN connectivity. It checks network and Home Assistant status every five seconds. Once Home Assistant becomes reachable after an outage, it must remain reachable for 15 seconds before the page automatically returns to the dashboard. Losing reachability cancels and resets that countdown.
 
@@ -261,7 +262,7 @@ Cron owns execution of scheduled changes, so schedules persist independently of 
 | `public/index.html` | Main management dashboard |
 | `public/kiosk.html` | Startup reachability decision |
 | `public/wifi.html` | Offline WiFi recovery and 15-second return logic |
-| `kiosk-extension/` | Chromium navigation-error and stale-dashboard recovery |
+| `kiosk-extension/` | Chromium navigation-error, stale-dashboard, and failed-card recovery |
 | `/etc/sudoers.d/display-pi-ha` | Non-interactive privilege allowlist |
 | `/home/display/sudoers-setup.sh` | Reinstalls the expected sudoers rules |
 | `/home/<user>/system_installer/pi4-homeassistant-kiosk-setup.sh` | Rebuild source for the wider Pi kiosk configuration (external to this repo; machine-specific path) |

@@ -52,6 +52,64 @@ async function checkConnectivity() {
   }
 }
 
+// After a Home Assistant restart the page can reload before HACS has registered
+// /hacsfiles/, so custom card modules 404 and every custom card renders as a
+// "Configuration error" until the next reload. Reload once HA is reachable and
+// the errors persist, backing off so a genuine config error cannot loop.
+const ERROR_CARD_CHECKS_BEFORE_RELOAD = 2;
+const RELOAD_BACKOFF_MS = [2, 5, 15, 30].map((minutes) => minutes * 60 * 1000);
+
+function countErrorCards() {
+  const tags = new Set(['hui-error-card', 'hui-error-badge', 'hui-error-heading-badge']);
+  let count = 0;
+  const roots = [document];
+  while (roots.length) {
+    for (const element of roots.pop().querySelectorAll('*')) {
+      if (tags.has(element.localName)) count += 1;
+      if (element.shadowRoot) roots.push(element.shadowRoot);
+    }
+  }
+  return count;
+}
+
+async function checkDashboardCards() {
+  try {
+    const status = await (await fetch(DASHBOARD_STATUS_URL, { cache: 'no-store' })).json();
+    if (!status.reachable) return;
+
+    const tabs = await chrome.tabs.query({ active: true });
+    for (const tab of tabs) {
+      if (typeof tab.id !== 'number' || tab.status !== 'complete' || !tab.url?.startsWith('http') || isLocalManagerUrl(tab.url)) continue;
+
+      const [{ result: errorCards } = {}] = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: countErrorCards
+      });
+      const stored = await chrome.storage.session.get(['errorCardChecks', 'cardReloads', 'lastCardReload']);
+      if (!errorCards) {
+        if (stored.errorCardChecks || stored.cardReloads) {
+          await chrome.storage.session.set({ errorCardChecks: 0, cardReloads: 0 });
+        }
+        continue;
+      }
+
+      const errorCardChecks = (Number(stored.errorCardChecks) || 0) + 1;
+      const cardReloads = Number(stored.cardReloads) || 0;
+      const backoff = RELOAD_BACKOFF_MS[Math.min(cardReloads, RELOAD_BACKOFF_MS.length - 1)];
+      const sinceLastReload = Date.now() - (Number(stored.lastCardReload) || 0);
+      if (errorCardChecks < ERROR_CARD_CHECKS_BEFORE_RELOAD || (cardReloads && sinceLastReload < backoff)) {
+        await chrome.storage.session.set({ errorCardChecks });
+        continue;
+      }
+
+      await chrome.storage.session.set({ errorCardChecks: 0, cardReloads: cardReloads + 1, lastCardReload: Date.now() });
+      await chrome.tabs.reload(tab.id, { bypassCache: true });
+    }
+  } catch (error) {
+    // Pages the extension cannot script, or a restarting local manager; try again next tick.
+  }
+}
+
 function startConnectivityMonitor() {
   chrome.alarms.create('dashboard-connectivity', { periodInMinutes: 0.5 });
   checkConnectivity();
@@ -60,7 +118,10 @@ function startConnectivityMonitor() {
 chrome.runtime.onInstalled.addListener(startConnectivityMonitor);
 chrome.runtime.onStartup.addListener(startConnectivityMonitor);
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'dashboard-connectivity') checkConnectivity();
+  if (alarm.name === 'dashboard-connectivity') {
+    checkConnectivity();
+    checkDashboardCards();
+  }
 });
 
 chrome.webNavigation.onErrorOccurred.addListener((details) => {
